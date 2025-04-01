@@ -1,21 +1,19 @@
-// src/routes/incomingCalls.js
+/*
+file: C:\Users\ryanl\Documents\Coding\medication-reminder-system\src/routes/incomingCalls.js
+*/
 import dotenv from 'dotenv';
 import express from 'express';
 import twilio from 'twilio';
-import { logToFirebase } from '../utils/firebase.js';
+import InternalServerError from '../errors/InternalServerError.js';
+import { logErrorToFirebase, logToFirebase } from '../utils/firebase.js';
 
 dotenv.config();
 const router = express.Router();
 const ngrokUrl = process.env.NGROK_URL;
 
-//////////// CURRENTLY does not log in Firebase or record the user, just streams and logs the transcript ///////////
 router.post('/incoming-call', async (req, res) => {
     console.log('sent to /incoming-call');
     const { CallSid, From } = req.body;
-
-    //// DO NOT DELETE - UNREM BEFORE LIVE
-    // const textToSpeak = `${new Date().toLocaleString()}. ${reminderText}`
-    // const reminderUrl = await elevenLabsTextToSpeech(textToSpeak)
 
     const reminderUrl = `${ngrokUrl}/reminder.mpeg`;
     const streamUrl = `wss://${req.headers.host}/live`;
@@ -35,10 +33,24 @@ router.post('/incoming-call', async (req, res) => {
     const beepUrl = `${ngrokUrl}/beep.mpeg`;
     gather.play(beepUrl);
 
-    await logToFirebase(CallSid, {
-        event: 'call_incoming',
-        from: From,
-    });
+    try {
+        await logToFirebase(CallSid, {
+            event: 'call_incoming',
+            from: From,
+        });
+    } catch (error) {
+        console.error('Error logging incoming call:', error);
+        await logErrorToFirebase(
+            'incomingCalls',
+            new InternalServerError(
+                'Error logging incoming call to Firebase',
+                500,
+                error.stack
+            )
+        );
+        // Decide if this error should prevent the Twilio response.
+        // For now, we'll log and continue.
+    }
 
     res.type('text/xml');
     res.send(twiml.toString());

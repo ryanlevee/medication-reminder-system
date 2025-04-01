@@ -1,7 +1,12 @@
-// src/routes/callLogs.js
+/*
+file: C:\Users\ryanl\Documents\Coding\medication-reminder-system\src/routes/callLogs.js
+*/
 import express from 'express';
 import { admin } from '../config/firebase.js'; // Import the initialized admin object
 import { parseISO, parse, isValid } from 'date-fns'; // Import parsing functions
+import BadRequestError from '../errors/BadRequestError.js';
+import NotFoundError from '../errors/NotFoundError.js';
+import { logErrorToFirebase } from '../utils/firebase.js';
 
 const router = express.Router();
 const db = admin.database();
@@ -22,7 +27,6 @@ router.get('/call-logs', async (req, res) => {
     } = req.query;
     const pageSize = parseInt(req.query.pageSize) || DEFAULT_PAGE_SIZE;
     const pageNumber = parseInt(page) || 1;
-
     let startDate, endDate;
 
     try {
@@ -35,9 +39,9 @@ router.get('/call-logs', async (req, res) => {
             if (callLogs) {
                 return res.json({ [callSid]: callLogs });
             } else {
-                return res
-                    .status(404)
-                    .json({ message: `No logs found for CallSid: ${callSid}` });
+                throw new NotFoundError(
+                    `No logs found for CallSid: ${callSid}`
+                );
             }
         } else {
             const snapshot = await query.once('value');
@@ -47,12 +51,10 @@ router.get('/call-logs', async (req, res) => {
         let filteredLogs = {};
 
         if (startDateStr && endDateStr) {
-            // Try parsing with ISO 8601 first
             startDate = parseISO(startDateStr);
             endDate = parseISO(endDateStr);
 
             if (!isValid(startDate) || !isValid(endDate)) {
-                // If ISO parsing fails, try a more common format (adjust as needed)
                 startDate = parse(
                     startDateStr,
                     'yyyy-MM-dd HH:mm:ss',
@@ -61,15 +63,11 @@ router.get('/call-logs', async (req, res) => {
                 endDate = parse(endDateStr, 'yyyy-MM-dd HH:mm:ss', new Date());
 
                 if (!isValid(startDate) || !isValid(endDate)) {
-                    return res
-                        .status(400)
-                        .json({
-                            message:
-                                'Invalid date format. Please use YYYY-MM-DD HH:mm:ss or a similar format.',
-                        });
+                    throw new BadRequestError(
+                        'Invalid date format. Please use ISO 8601 or YYYY-MM-DD HH:mm:ss.'
+                    );
                 }
             }
-            // Now 'startDate' and 'endDate' are JavaScript Date objects
             const start = startDate.getTime();
             const end = endDate.getTime();
 
@@ -87,7 +85,6 @@ router.get('/call-logs', async (req, res) => {
                         filteredLogs[callSidKey][logId] = log;
                     }
                 }
-                // Remove empty CallSid entries if no logs fall within the date range
                 if (Object.keys(filteredLogs[callSidKey]).length === 0) {
                     delete filteredLogs[callSidKey];
                 }
@@ -96,7 +93,6 @@ router.get('/call-logs', async (req, res) => {
             filteredLogs = allLogsData;
         }
 
-        // Pagination for all logs or date-filtered logs
         const allFilteredLogsArray = Object.entries(filteredLogs).flatMap(
             ([callSidKey, callLogs]) =>
                 Object.values(callLogs).map(log => ({
@@ -121,7 +117,21 @@ router.get('/call-logs', async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching call logs:', error);
-        return res.status(500).json({ message: 'Failed to fetch call logs' });
+        if (
+            error instanceof BadRequestError ||
+            error instanceof NotFoundError
+        ) {
+            return res
+                .status(error.statusCode)
+                .json({ message: error.message });
+        } else {
+            await logErrorToFirebase('callLogs', error); // Log unexpected errors
+            return res
+                .status(500)
+                .json({
+                    message: 'Failed to fetch call logs from the database.',
+                });
+        }
     }
 });
 

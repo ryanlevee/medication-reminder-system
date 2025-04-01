@@ -1,9 +1,13 @@
-// src/services/elevenLabsService.js
+/*
+file: C:\Users\ryanl\Documents\Coding\medication-reminder-system\src/services/elevenLabsService.js
+*/
 import ElevenLabsClient from 'elevenlabs-node';
 import path, { dirname } from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import ElevenLabsApiError from '../errors/ElevenLabsApiError.js';
+import InternalServerError from '../errors/InternalServerError.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -33,15 +37,39 @@ async function elevenLabsTextToSpeech(voiceId, textInput, fileName) {
             audioStream.on('end', async () => {
                 const audioBuffer = Buffer.concat(chunks);
                 const filePath = path.join(__dirname, '../../public', fileName); // Adjust path as needed
-                await fs.writeFile(filePath, audioBuffer);
-                console.log('File created at: ', filePath);
-                resolve(`${ngrokUrl}/${fileName}`);
+                try {
+                    await fs.writeFile(filePath, audioBuffer);
+                    console.log('File created at: ', filePath);
+                    resolve(`${ngrokUrl}/${fileName}`);
+                } catch (error) {
+                    console.error('Error writing TTS audio file:', error);
+                    reject(
+                        new InternalServerError(
+                            'Error writing TTS audio file',
+                            500,
+                            error.stack
+                        )
+                    );
+                }
             });
-            audioStream.on('error', reject);
+            audioStream.on('error', error => {
+                console.error('ElevenLabs API stream error:', error);
+                reject(
+                    new ElevenLabsApiError(
+                        'ElevenLabs API stream error',
+                        500,
+                        error.stack
+                    )
+                );
+            });
         });
     } catch (error) {
         console.error('Error generating TTS audio:', error);
-        return null;
+        throw new ElevenLabsApiError(
+            'Error generating TTS audio',
+            500,
+            error.stack
+        );
     }
 }
 
