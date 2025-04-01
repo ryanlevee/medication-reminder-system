@@ -1,0 +1,15 @@
+node_modules
+dist
+archive
+archive*
+*.env.local
+*__pycache__*
+script*.py
+__pycache__
+*test*
+*_BU*
+.vscode
+.env.local
+*.env
+config.js
+private
