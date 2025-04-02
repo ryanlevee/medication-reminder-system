@@ -37,7 +37,7 @@ app.use('/', callLogsRouter);
 
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/live' });
-const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
+const deepgram = createClient(process.env.DEEPGRAM_API_KEY); // should i do this here? or in a deepgramService.js file?
 
 app.use((err, req, res, next) => {
     console.error('Global error handler:', err);

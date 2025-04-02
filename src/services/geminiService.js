@@ -1,4 +1,4 @@
-import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
+import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from '@google/genai';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -67,13 +67,9 @@ const relaxedSafetySettings = [
 ];
 // -------------------------------------
 
-
-
 ////////////////// MAKE SURE DEEPGRAM IS GETTING LLM PART OF CONVO
 ////////////////// PUT IN PROMPT: KEEP ASKING FOR CONFIRMATION OF INTITIAL QUESTION AT THE END OF EACH ANSWER IF THEY HAVE NOT RECEIVED IT YET.
 ////////////////// MAYBE ADD FLAG ONCE THEY RECEIVE CONFIRMATION
-
-
 
 // --- Initial Prompt Setup Turns ---
 const SYSTEM_INSTRUCTION_TEXT = [
