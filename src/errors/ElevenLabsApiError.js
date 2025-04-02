@@ -1,4 +1,3 @@
-// src/errors/ElevenLabsApiError.js
 import BaseError from './BaseError.js';
 
 class ElevenLabsApiError extends BaseError {

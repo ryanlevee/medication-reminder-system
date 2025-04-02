@@ -1,4 +1,3 @@
-// src/errors/NotFoundError.js
 import BaseError from './BaseError.js';
 
 class NotFoundError extends BaseError {

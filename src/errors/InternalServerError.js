@@ -1,4 +1,3 @@
-// src/errors/InternalServerError.js
 import BaseError from './BaseError.js';
 
 class InternalServerError extends BaseError {

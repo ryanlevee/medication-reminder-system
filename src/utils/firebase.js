@@ -1,22 +1,20 @@
-/*
-file: C:\Users\ryanl\Documents\Coding\medication-reminder-system\src\utils/firebase.js
-*/
 import admin from 'firebase-admin';
+import FirebaseError from '../errors/FirebaseError.js';
 
 const db = admin.database();
 
 async function logToFirebase(callSid, logData) {
+    console.log('Logging call data to Firebase:', { callSid, logData });
+
     try {
         const logsRef = db.ref(`logs/${callSid}`);
         await logsRef.push({
             timestamp: admin.database.ServerValue.TIMESTAMP,
             ...logData,
         });
-        console.log('Data logged to Firebase:', logData);
     } catch (error) {
         console.error('Error writing to Firebase:', error);
-        // Consider throwing a custom FirebaseError here if you want to handle
-        // Firebase logging failures in the calling functions.
+        throw new FirebaseError('Error writing to Firebase', 500, error.stack);
     }
 }
 
@@ -35,6 +33,11 @@ async function logErrorToFirebase(callSid, error) {
         );
     } catch (firebaseError) {
         console.error('Error writing error log to Firebase:', firebaseError);
+        throw new FirebaseError(
+            'Error writing error log to Firebase',
+            500,
+            firebaseError.stack
+        );
     }
 }
 

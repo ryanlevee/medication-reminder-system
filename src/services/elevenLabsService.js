@@ -1,6 +1,3 @@
-/*
-file: C:\Users\ryanl\Documents\Coding\medication-reminder-system\src/services/elevenLabsService.js
-*/
 import ElevenLabsClient from 'elevenlabs-node';
 import path, { dirname } from 'path';
 import fs from 'fs/promises';
@@ -9,8 +6,8 @@ import dotenv from 'dotenv';
 import ElevenLabsApiError from '../errors/ElevenLabsApiError.js';
 import InternalServerError from '../errors/InternalServerError.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = dirname(__filename);
 dotenv.config();
 
 const elevenLabs = new ElevenLabsClient({
@@ -36,7 +33,11 @@ async function elevenLabsTextToSpeech(voiceId, textInput, fileName) {
             });
             audioStream.on('end', async () => {
                 const audioBuffer = Buffer.concat(chunks);
-                const filePath = path.join(__dirname, '../../public', fileName); // Adjust path as needed
+                // const filePath = path.join(__dirname, '../public', fileName); // Adjust path as needed
+                const currentFilePath = fileURLToPath(import.meta.url); // Plugin will transform this
+                const currentDir = dirname(currentFilePath);
+                const filePath = path.join(currentDir, '../public', fileName); // Use calculated dir
+
                 try {
                     await fs.writeFile(filePath, audioBuffer);
                     console.log('File created at: ', filePath);

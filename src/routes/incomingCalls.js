@@ -1,11 +1,8 @@
-/*
-file: C:\Users\ryanl\Documents\Coding\medication-reminder-system\src/routes/incomingCalls.js
-*/
 import dotenv from 'dotenv';
 import express from 'express';
 import twilio from 'twilio';
+import { logToFirebase, logErrorToFirebase } from '../utils/firebase.js';
 import InternalServerError from '../errors/InternalServerError.js';
-import { logErrorToFirebase, logToFirebase } from '../utils/firebase.js';
 
 dotenv.config();
 const router = express.Router();
@@ -13,7 +10,7 @@ const ngrokUrl = process.env.NGROK_URL;
 
 router.post('/incoming-call', async (req, res) => {
     console.log('sent to /incoming-call');
-    const { CallSid, From } = req.body;
+    const { CallSid, From, To } = req.body;
 
     const reminderUrl = `${ngrokUrl}/reminder.mpeg`;
     const streamUrl = `wss://${req.headers.host}/live`;
@@ -27,19 +24,23 @@ router.post('/incoming-call', async (req, res) => {
         input: 'speech',
         speechTimeout: 2,
         maxSpeechTime: 12,
-        action: '/handle-speech',
+        action: '/handle-speech?retry=0',
     });
 
     const beepUrl = `${ngrokUrl}/beep.mpeg`;
     gather.play(beepUrl);
 
     try {
+        const status = 'Incoming call.';
         await logToFirebase(CallSid, {
             event: 'call_incoming',
+            status,
             from: From,
+            to: To,
         });
     } catch (error) {
-        console.error('Error logging incoming call:', error);
+        const status = `Error logging incoming call: ${error}`;
+        consoleLogCall({ callSid: CallSid, status });
         await logErrorToFirebase(
             'incomingCalls',
             new InternalServerError(
@@ -49,7 +50,7 @@ router.post('/incoming-call', async (req, res) => {
             )
         );
         // Decide if this error should prevent the Twilio response.
-        // For now, we'll log and continue.
+        // For now, log and continue.
     }
 
     res.type('text/xml');

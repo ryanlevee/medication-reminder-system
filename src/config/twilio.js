@@ -1,6 +1,3 @@
-/*
-file: C:\Users\ryanl\Documents\Coding\medication-reminder-system\src\config/twilio.js
-*/
 import twilio from 'twilio';
 import dotenv from 'dotenv';
 import TwilioApiError from '../errors/TwilioApiError.js';
@@ -17,14 +14,15 @@ async function updateIncomingCallWebhookUrls() {
     try {
         const updatedNumbers = [];
         await client.incomingPhoneNumbers.each(async item => {
+            updatedNumbers.push(item.phoneNumber);
             await item.update({
                 voiceUrl: `${ngrokUrl}/incoming-call`,
             });
-            updatedNumbers.push(item.friendlyName || item.phoneNumber);
         });
-        console.log(
-            `Incoming call webhook URLs updated for: ${updatedNumbers.join(', ')} to ${ngrokUrl}/incoming-call`
-        );
+        console.log(`Incoming call webhook URLs updated`, {
+            phoneNumbers: updatedNumbers,
+            url: `${ngrokUrl}/incoming-call`,
+        });
     } catch (error) {
         console.error('Error updating Twilio webhook URLs:', error.message);
         throw new TwilioApiError(

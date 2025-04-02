@@ -6,7 +6,8 @@ archive*
 *__pycache__*
 script*.py
 __pycache__
-*test*
+/test/
+/*test*.js
 *_BU*
 .vscode
 .env.local

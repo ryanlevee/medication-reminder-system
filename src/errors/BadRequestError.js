@@ -1,4 +1,3 @@
-// src/errors/BadRequestError.js
 import BaseError from './BaseError.js';
 
 class BadRequestError extends BaseError {

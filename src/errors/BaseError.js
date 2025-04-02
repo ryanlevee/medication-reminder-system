@@ -1,4 +1,3 @@
-// src/errors/BaseError.js
 class BaseError extends Error {
     constructor(name, message, statusCode, isOperational = true, stack = '') {
         super(message);
