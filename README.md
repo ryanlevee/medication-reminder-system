@@ -280,4 +280,8 @@ This project uses [Jest](https://jestjs.io/) for unit and integration testing. T
 -   Unexpected programming errors are caught by a global error handler in `src/server.js`, logged to Firebase under `/errors`, and result in a generic 500 Internal Server Error response to the client.
 -   WebSocket and Deepgram connection errors are handled within `src/websocketHandler.js` and logged to Firebase.
 
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 ---
