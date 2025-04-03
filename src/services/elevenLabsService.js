@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import ElevenLabsApiError from '../errors/ElevenLabsApiError.js';
 import InternalServerError from '../errors/InternalServerError.js';
+import { TtsHolder } from '../storage/ttsHolder.js';
 
 // const __filename = fileURLToPath(import.meta.url);
 // const __dirname = dirname(__filename);
@@ -15,14 +16,16 @@ const elevenLabs = new ElevenLabsClient({
 });
 const ngrokUrl = process.env.NGROK_URL;
 
-async function elevenLabsTextToSpeech(voiceId, textInput, fileName) {
+async function elevenLabsTextToSpeech(textInput, fileName) {
+    const voiceId = process.env.ELEVENLABS_VOICE_ID
+    
     try {
         console.log({
-            voiceId,
+            voiceId,//: TtsHolder.voiceId,
             textInput,
         });
         const audioStream = await elevenLabs.textToSpeechStream({
-            voiceId,
+            voiceId,//: TtsHolder.voiceId,
             textInput,
         });
 

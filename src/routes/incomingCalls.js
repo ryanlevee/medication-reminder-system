@@ -3,6 +3,8 @@ import express from 'express';
 import twilio from 'twilio';
 import { logToFirebase, logErrorToFirebase } from '../utils/firebase.js';
 import InternalServerError from '../errors/InternalServerError.js';
+import { TtsHolder } from '../storage/ttsHolder.js';
+import { elevenLabsTextToSpeech } from '../services/elevenLabsService.js';
 
 dotenv.config();
 const router = express.Router();
@@ -12,9 +14,12 @@ router.post('/incoming-call', async (req, res) => {
     console.log('sent to /incoming-call');
     const { CallSid, From, To } = req.body;
 
-    const reminderUrl = `${ngrokUrl}/reminder.mpeg`;
-    const streamUrl = `wss://${req.headers.host}/live`;
+    const textToSpeakToHuman = TtsHolder.reminder;
+    const reminderFileName = 'reminder.mpeg'
+    const reminderUrl = await elevenLabsTextToSpeech(textToSpeakToHuman, reminderFileName);
+    // const reminderUrl = `${ngrokUrl}/reminder.mpeg`;
 
+    const streamUrl = `wss://${req.headers.host}/live`;
     const twiml = new twilio.twiml.VoiceResponse();
     const stream = twiml.start().stream({ url: streamUrl });
     stream.parameter({ name: 'CallSid', value: CallSid });

@@ -9,6 +9,7 @@ import TwilioApiError from '../errors/TwilioApiError.js';
 import InternalServerError from '../errors/InternalServerError.js';
 import BadRequestError from '../errors/BadRequestError.js';
 import { consoleLogCall } from '../utils/consoleLogCall.js';
+import { TtsHolder } from '../storage/ttsHolder.js';
 
 const callHistories = new Map();
 
@@ -19,11 +20,6 @@ const twilioClient = new twilio(
     process.env.TWILIO_ACCOUNT_SID,
     process.env.TWILIO_AUTH_TOKEN
 );
-
-const reminderText =
-    'Hello, this is a reminder from your healthcare provider to confirm your medications for the day. Please confirm if you have taken your Aspirin, Cardivol, and Metformin today. If you have any questions regarding your medication, please ask after the tone.';
-const unansweredText =
-    "We called to check on your medication but couldn't reach you. Please call us back or take your medications if you haven't done so.";
 
 router.post('/call', async (req, res) => {
     const { phoneNumber } = req.body;
@@ -83,10 +79,11 @@ router.post('/answered', async (req, res) => {
         switch (AnsweredBy) {
             case 'human':
                 //// DO NOT DELETE - UNREM BEFORE LIVE
-                // const textToSpeak = `${new Date().toLocaleString()}. ${reminderText}`
-                // const reminderUrl = await elevenLabsTextToSpeech(textToSpeak)
+                const textToSpeakToHuman = TtsHolder.reminder;
+                const reminderUrl =
+                    await elevenLabsTextToSpeech(textToSpeakToHuman);
+                // const reminderUrl = `${ngrokUrl}/reminder.mpeg`;
 
-                const reminderUrl = `${ngrokUrl}/reminder.mpeg`;
                 const streamUrl = `wss://${req.headers.host}/live`;
                 const stream = twiml.start().stream({ url: streamUrl });
                 stream.parameter({ name: 'CallSid', value: CallSid });
@@ -105,10 +102,11 @@ router.post('/answered', async (req, res) => {
             case 'machine_end_silence':
             case 'machine_end_other':
                 //// DO NOT DELETE - UNREM BEFORE LIVE
-                // const textToSpeak = `${new Date().toLocaleString()}. ${unansweredText}`
-                // const voicemailUrl = await elevenLabsTextToSpeech(textToSpeak)
+                const textToSpeakToMachine = `${new Date().toLocaleString()}. ${TtsHolder.unanswered}`;
+                const voicemailUrl =
+                    await elevenLabsTextToSpeech(textToSpeakToMachine);
+                // const voicemailUrl = `${ngrokUrl}/voicemail.mpeg`;
 
-                const voicemailUrl = `${ngrokUrl}/voicemail.mpeg`;
                 twiml.play(voicemailUrl);
                 break;
             case 'unknown':
@@ -157,18 +155,17 @@ router.post('/answered', async (req, res) => {
 });
 
 const MAX_RETRIES = 2; // Allow 2 retries after the initial attempt (total 3 tries)
-const MAX_CONVERSATION_TURNS = 5; // Define the maximum number of system responses
+const MAX_CONVERSATION_TURNS = 10; // Define the maximum number of system responses
 const FINAL_CLOSING_MESSAGE =
     'If you have any further questions, please consult your doctor or pharmacist. Goodbye.';
 // --- Updated /handle-speech for Multi-Turn with 5-Turn Limit ---
 router.post('/handle-speech', async (req, res) => {
     const { CallSid, SpeechResult } = req.body;
     const currentRetry = parseInt(req.query.retry || '0', 10);
-    // console.log(`Handling speech/gather result for ${CallSid} (Retry attempt ${currentRetry + 1})`); // Keep this log if useful
 
     const twiml = new twilio.twiml.VoiceResponse();
     let llmText = null;
-    let ttsAudioUrl = null; // Keep commented for testing
+    let ttsAudioUrl = null; // comment-out for testing
     let logData = {
         event: 'handle_speech_turn',
         retryAttempt: currentRetry + 1,
@@ -272,26 +269,39 @@ router.post('/handle-speech', async (req, res) => {
         logData.will_hangup = hangup;
 
         // --- Step 4: Generate TTS Audio (Commented out for testing) ---
-        ttsAudioUrl = null; // Ensure null for testing
-        /* // Keep this block ready for uncommenting
+        // ttsAudioUrl = null; // Ensure null for testing
+        // Keep this block ready for uncommenting
         if (spokenText) {
             const uniqueFileName = `tts-${CallSid}-${uuidv4()}.mpeg`;
             try {
                 console.log(`Requesting TTS for: "${spokenText}"`);
                 ttsAudioUrl = await elevenLabsTextToSpeech(
-                    elevenLabsVoiceId, spokenText, uniqueFileName
+                    spokenText,
+                    uniqueFileName
                 );
                 logData.tts_audio_url = ttsAudioUrl;
                 console.log(`TTS Audio URL for ${CallSid}: ${ttsAudioUrl}`);
-            } catch (ttsError) { // ... (keep TTS error handling) ... }
+            } catch (ttsError) {
+                console.error('Error handling speech:', ttsError);
+                await logErrorToFirebase(
+                    'calls',
+                    new InternalServerError(
+                        'Error processing speech input.',
+                        500,
+                        error.stack
+                    )
+                );
+                res.status(500).send({
+                    message: 'Error processing speech input.',
+                });
+            }
         }
-        */
 
         // --- Step 5: Generate TwiML Response ---
         if (ttsAudioUrl) {
             // --- Keep commented out logic structure ---
-            // console.log(`Generating TwiML to PLAY ${ttsAudioUrl}`);
-            // twiml.play(ttsAudioUrl);
+            console.log(`Generating TwiML to PLAY ${ttsAudioUrl}`);
+            twiml.play(ttsAudioUrl);
         } else {
             console.log(`Generating TwiML to SAY "${spokenText}"`);
             twiml.say(spokenText); // Use <Say> during testing, using the final spokenText
@@ -354,64 +364,6 @@ router.post('/handle-speech', async (req, res) => {
         res.status(200).send(errorTwiml.toString());
     }
 });
-
-// router.post('/handle-speech', async (req, res) => {
-//     const { CallSid, SpeechResult } = req.body;
-//     const currentRetry = parseInt(req.query.retry || '0', 10);
-//     console.log(`sent to /handle-speech (Attempt ${currentRetry + 1})`);
-
-//     const twiml = new twilio.twiml.VoiceResponse();
-
-//     try {
-//         if (SpeechResult) {
-//             console.log({ SpeechResult });
-//             twiml.say('Thank you. Goodbye.');
-//         } else {
-//             console.log(
-//                 `No speech detected for ${CallSid} on attempt ${currentRetry + 1}`
-//             );
-//             if (currentRetry < MAX_RETRIES) {
-//                 // If we haven't reached max retries, try again
-//                 const nextRetry = currentRetry + 1;
-//                 twiml.say(
-//                     'No speech detected. Please try again after the beep.'
-//                 );
-//                 const gather = twiml.gather({
-//                     input: 'speech',
-//                     speechTimeout: 2, // Use same timeouts
-//                     maxSpeechTime: 12, // Point back to this handler, incrementing the retry count
-//                     action: `/handle-speech?retry=${nextRetry}`,
-//                     actionOnEmptyResult: true,
-//                 }); // Play the beep again to signal listening
-//                 const beepUrl = `${ngrokUrl}/beep.mpeg`;
-//                 gather.play(beepUrl); // Add a fallback if gather itself fails unexpectedly after retrying
-
-//                 // Although typically if gather fails, Twilio proceeds with verbs after it
-//                 twiml.say("Sorry, I'm having trouble hearing you. Goodbye.");
-//                 twiml.hangup();
-//             } else {
-//                 // Max retries reached
-//                 console.log(`Max retries reached for ${CallSid}. Hanging up.`);
-//                 twiml.say('Sorry, I still could not understand you. Goodbye.');
-//                 twiml.hangup();
-//             }
-//         }
-//         res.type('text/xml');
-//         res.send(twiml.toString());
-//     } catch (error) {
-//         console.error('Error handling speech:', error);
-//         consoleLogCall({ callSid: CallSid, status: error });
-//         await logErrorToFirebase(
-//             'calls',
-//             new InternalServerError(
-//                 'Error processing speech input.',
-//                 500,
-//                 error.stack
-//             )
-//         );
-//         res.status(500).send({ message: 'Error processing speech input.' });
-//     }
-// });
 
 router.post('/call-status', async (req, res) => {
     const { CallSid, CallStatus, AnsweredBy, To } = req.body;
