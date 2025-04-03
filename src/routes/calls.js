@@ -258,7 +258,7 @@ router.post('/answered', async (req, res) => {
                 statusMessage = `Call answered by machine (${AnsweredBy}). Leaving voicemail.`;
                 console.log(statusMessage);
                 // Add timestamp to voicemail message for uniqueness if desired
-                const textToSpeakToMachine = `${new Date().toLocaleString()}. ${TtsHolder.unanswered}`;
+                const textToSpeakToMachine = TtsHolder.unanswered;
                 const voicemailFileName = `voicemail-${CallSid}-${uuidv4()}.mpeg`;
                 ttsAudioUrl = await elevenLabsTextToSpeech(
                     textToSpeakToMachine,
@@ -535,7 +535,7 @@ router.post('/handle-speech', async (req, res) => {
                 await logErrorToFirebase(CallSid, ttsError).catch(e =>
                     console.error('FB log error (TTS):', e)
                 );
-                // Consider adding a generic error message to spokenText here?
+                // Consider adding a generic error message to spokenText here or something...
                 // spokenText = "I'm having trouble speaking right now. " + spokenText;
             }
         }
