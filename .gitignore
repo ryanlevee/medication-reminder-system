@@ -1,11 +1,8 @@
 node_modules
 dist
 archive
-archive*
 *.env.local
 *__pycache__*
-script*.py
-__pycache__
 /test/
 /*test*.js
 *_BU*

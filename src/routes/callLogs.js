@@ -1,9 +1,9 @@
+import { isValid, parse, parseISO } from 'date-fns';
 import express from 'express';
-import { admin } from '../config/firebase.js'; // Import the initialized admin object
-import { parseISO, parse, isValid } from 'date-fns'; // Import parsing functions
+import { admin } from '../config/firebase.js';
 import BadRequestError from '../errors/BadRequestError.js';
-import NotFoundError from '../errors/NotFoundError.js';
 import FirebaseError from '../errors/FirebaseError.js';
+import NotFoundError from '../errors/NotFoundError.js';
 import { logErrorToFirebase } from '../utils/firebase.js';
 
 const router = express.Router();
@@ -123,19 +123,14 @@ router.get('/call-logs', async (req, res) => {
                 .status(error.statusCode)
                 .json({ message: error.message });
         } else if (error instanceof FirebaseError) {
-            return res
-                .status(500)
-                .json({
-                    message:
-                        'Failed to fetch call logs due to a database error.',
-                });
+            return res.status(500).json({
+                message: 'Failed to fetch call logs due to a database error.',
+            });
         } else {
             await logErrorToFirebase('callLogs', error);
-            return res
-                .status(500)
-                .json({
-                    message: 'Failed to fetch call logs from the database.',
-                });
+            return res.status(500).json({
+                message: 'Failed to fetch call logs from the database.',
+            });
         }
     }
 });

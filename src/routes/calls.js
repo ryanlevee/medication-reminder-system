@@ -1,12 +1,12 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import twilio from 'twilio';
-import { v4 as uuidv4 } from 'uuid'; // For unique filenames
+import { v4 as uuidv4 } from 'uuid';
 import BadRequestError from '../errors/BadRequestError.js';
 import InternalServerError from '../errors/InternalServerError.js';
 import TwilioApiError from '../errors/TwilioApiError.js';
 import { elevenLabsTextToSpeech } from '../services/elevenLabsService.js';
-import { generateLlmResponse } from '../services/geminiService.js'; // Ensure this points to your service file
+import { generateLlmResponse } from '../services/geminiService.js';
 import { TtsHolder } from '../storage/ttsHolder.js';
 import { consoleLogCall } from '../utils/consoleLogCall.js';
 import { logErrorToFirebase, logToFirebase } from '../utils/firebase.js';
@@ -50,8 +50,6 @@ router.post('/call', async (req, res) => {
             });
         } catch (firebaseError) {
             console.error('Error logging to Firebase:', firebaseError);
-            // Decide if this is critical enough to impact the call initiation response.
-            // For now, log and continue.
         }
 
         return res.send({
@@ -78,11 +76,9 @@ router.post('/answered', async (req, res) => {
     try {
         switch (AnsweredBy) {
             case 'human':
-                //// DO NOT DELETE - UNREM BEFORE LIVE
                 const textToSpeakToHuman = TtsHolder.reminder;
                 const reminderUrl =
                     await elevenLabsTextToSpeech(textToSpeakToHuman);
-                // const reminderUrl = `${ngrokUrl}/reminder.mpeg`;
 
                 const streamUrl = `wss://${req.headers.host}/live`;
                 const stream = twiml.start().stream({ url: streamUrl });
@@ -101,11 +97,9 @@ router.post('/answered', async (req, res) => {
             case 'machine_end_beep':
             case 'machine_end_silence':
             case 'machine_end_other':
-                //// DO NOT DELETE - UNREM BEFORE LIVE
                 const textToSpeakToMachine = `${new Date().toLocaleString()}. ${TtsHolder.unanswered}`;
                 const voicemailUrl =
                     await elevenLabsTextToSpeech(textToSpeakToMachine);
-                // const voicemailUrl = `${ngrokUrl}/voicemail.mpeg`;
 
                 twiml.play(voicemailUrl);
                 break;
@@ -135,7 +129,6 @@ router.post('/answered', async (req, res) => {
             });
         } catch (firebaseError) {
             console.error('Error logging to Firebase:', firebaseError);
-            // Decide if this is critical. For now, log and continue.
         }
         res.type('text/xml');
         res.send(twiml.toString());
@@ -154,47 +147,43 @@ router.post('/answered', async (req, res) => {
     }
 });
 
-const MAX_RETRIES = 2; // Allow 2 retries after the initial attempt (total 3 tries)
-const MAX_CONVERSATION_TURNS = 10; // Define the maximum number of system responses
+const MAX_RETRIES = 2;
+const MAX_CONVERSATION_TURNS = 10;
 const FINAL_CLOSING_MESSAGE =
     'If you have any further questions, please consult your doctor or pharmacist. Goodbye.';
-// --- Updated /handle-speech for Multi-Turn with 5-Turn Limit ---
 router.post('/handle-speech', async (req, res) => {
     const { CallSid, SpeechResult } = req.body;
     const currentRetry = parseInt(req.query.retry || '0', 10);
 
     const twiml = new twilio.twiml.VoiceResponse();
     let llmText = null;
-    let ttsAudioUrl = null; // comment-out for testing
+    let ttsAudioUrl = null;
     let logData = {
         event: 'handle_speech_turn',
         retryAttempt: currentRetry + 1,
     };
 
-    // --- Retrieve History & Calculate Turn Number ---
     let currentHistoryData = callHistories.get(CallSid) || {
         history: [],
         lastUpdated: Date.now(),
     };
     let currentHistory = currentHistoryData.history;
-    // A "turn" is counted after the system responds.
-    // History length 0 = start of turn 1. History length 2 = start of turn 2. History length 8 = start of turn 5.
+
     const turnNumber = Math.floor(currentHistory.length / 2) + 1;
     logData.turn = turnNumber;
-    logData.speechResult = SpeechResult || '[No speech detected]'; // Add speech result here now we have turn context
+    logData.speechResult = SpeechResult || '[No speech detected]';
 
     console.log(
         `Handling Turn ${turnNumber} for ${CallSid} (Retry attempt ${currentRetry + 1})`
     );
 
     try {
-        // --- Step 1: Handle Retries for SILENCE on this turn ---
         if (!SpeechResult && currentRetry < MAX_RETRIES) {
             console.log(
                 `No speech detected for ${CallSid}, retrying turn (Attempt ${currentRetry + 1})`
             );
             const nextRetry = currentRetry + 1;
-            // Ask again or give a generic prompt
+
             twiml.say(
                 "Sorry, I didn't hear anything. Could you please repeat that?"
             );
@@ -202,75 +191,64 @@ router.post('/handle-speech', async (req, res) => {
                 input: 'speech',
                 speechTimeout: 1,
                 maxSpeechTime: 12,
-                action: `/handle-speech?retry=${nextRetry}`, // Point back with incremented retry
+                action: `/handle-speech?retry=${nextRetry}`,
                 actionOnEmptyResult: true,
             });
             const beepUrl = `${ngrokUrl}/beep.mpeg`;
             gather.play(beepUrl);
-            twiml.say("If you're finished, you can hang up. Goodbye."); // Fallback after retry gather
+            twiml.say("If you're finished, you can hang up. Goodbye.");
             twiml.hangup();
 
             res.type('text/xml');
-            return res.send(twiml.toString()); // Exit early for retry
+            return res.send(twiml.toString());
         }
 
-        // --- If speech exists OR max retries for this turn's silence were reached ---
         console.log(
             `Proceeding with LLM for ${CallSid}. Turn ${logData.turn}. Input: "${SpeechResult || '[Max retries - No speech]'}"`
         );
 
-        // --- Step 2: Generate LLM Response (passing history) ---
         const { llmText: generatedText, updatedHistory } =
             await generateLlmResponse(SpeechResult, currentHistory);
-        llmText = generatedText; // Assign to outer scope variable
+        llmText = generatedText;
 
-        // --- Store Updated History ---
-        // Store history regardless of turn number, so we have the full record
         callHistories.set(CallSid, {
             history: updatedHistory,
             lastUpdated: Date.now(),
         });
         logData.llm_model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-        logData.llm_response_text = llmText; // Log the raw LLM response
+        logData.llm_response_text = llmText;
         console.log(`LLM Text (Turn ${turnNumber}) for ${CallSid}: ${llmText}`);
 
-        // --- Step 3: Check for Hangup Conditions (Turn Limit OR LLM Flag) ---
         let hangup = false;
-        let spokenText = llmText; // Text to actually say/TTS
+        let spokenText = llmText;
 
         if (turnNumber >= MAX_CONVERSATION_TURNS) {
-            // --- Enforce Turn Limit ---
             console.log(
                 `Max turns (${MAX_CONVERSATION_TURNS}) reached for ${CallSid}. Overriding LLM response.`
             );
-            spokenText = FINAL_CLOSING_MESSAGE; // Use the specific closing message
-            hangup = true; // Force hangup
-        } else if (llmText && llmText.includes('HANGUPNOW')) {
-            // --- Check for LLM Hangup Flag (only if turn limit not reached) ---
+            spokenText = FINAL_CLOSING_MESSAGE;
             hangup = true;
-            spokenText = llmText.replace(' HANGUPNOW', '').trim(); // Remove flag for speaking
+        } else if (llmText && llmText.includes('HANGUPNOW')) {
+            hangup = true;
+            spokenText = llmText.replace(' HANGUPNOW', '').trim();
             console.log(
                 `Hangup flag detected for ${CallSid} before max turns.`
             );
         }
 
-        // Defensive check for empty text after potential flag removal
         if (!spokenText) {
             console.warn(
                 `Spoken text is empty for ${CallSid}. Using fallback.`
             );
             spokenText = hangup
                 ? 'Okay. Goodbye.'
-                : 'Sorry, I encountered an issue.'; // Use appropriate fallback
-            // If text was *only* HANGUPNOW, ensure hangup is true
+                : 'Sorry, I encountered an issue.';
+
             if (llmText === 'HANGUPNOW') hangup = true;
         }
-        logData.llm_spoken_text = spokenText; // Log the text actually intended for speech
+        logData.llm_spoken_text = spokenText;
         logData.will_hangup = hangup;
 
-        // --- Step 4: Generate TTS Audio (Commented out for testing) ---
-        // ttsAudioUrl = null; // Ensure null for testing
-        // Keep this block ready for uncommenting
         if (spokenText) {
             const uniqueFileName = `tts-${CallSid}-${uuidv4()}.mpeg`;
             try {
@@ -297,14 +275,12 @@ router.post('/handle-speech', async (req, res) => {
             }
         }
 
-        // --- Step 5: Generate TwiML Response ---
         if (ttsAudioUrl) {
-            // --- Keep commented out logic structure ---
             console.log(`Generating TwiML to PLAY ${ttsAudioUrl}`);
             twiml.play(ttsAudioUrl);
         } else {
             console.log(`Generating TwiML to SAY "${spokenText}"`);
-            twiml.say(spokenText); // Use <Say> during testing, using the final spokenText
+            twiml.say(spokenText);
         }
 
         if (hangup) {
@@ -314,7 +290,6 @@ router.post('/handle-speech', async (req, res) => {
                 ? 'Play + Hangup'
                 : 'Say + Hangup';
         } else {
-            // --- Add Gather for the NEXT turn ---
             console.log(
                 `TwiML: Adding <Gather> for next turn (${turnNumber + 1}) for ${CallSid}`
             );
@@ -322,13 +297,13 @@ router.post('/handle-speech', async (req, res) => {
                 input: 'speech',
                 speechTimeout: 2,
                 maxSpeechTime: 12,
-                action: `/handle-speech?retry=0`, // Loop back, RESET retry count for the new turn
+                action: `/handle-speech?retry=0`,
                 actionOnEmptyResult: true,
             });
 
             const beepUrl = `${ngrokUrl}/beep.mpeg`;
             gather.play(beepUrl);
-            // Fallback if the user goes silent on the NEXT turn's gather
+
             twiml.say(
                 'Is there anything else? If not, you can hang up now. Goodbye.'
             );
@@ -338,8 +313,7 @@ router.post('/handle-speech', async (req, res) => {
                 : 'Say + Gather';
         }
 
-        // --- Final Logging & Response ---
-        logData.event = 'handle_speech_processed'; // Final event status for log
+        logData.event = 'handle_speech_processed';
         try {
             await logToFirebase(CallSid, logData);
         } catch (logError) {
@@ -410,7 +384,6 @@ router.post('/call-status', async (req, res) => {
                     'Error logging call status to Firebase:',
                     firebaseError
                 );
-                // Log and continue.
             }
         } catch (error) {
             console.error('Error sending SMS:', error);
@@ -421,10 +394,9 @@ router.post('/call-status', async (req, res) => {
             );
             res.status(500).send({ error: 'Failed to send SMS.' });
         }
+    } else {
+        return false;
     }
-    // else {
-    //     res.sendStatus(200);
-    // }
 });
 
 router.post('/handle-recording', async (req, res) => {
@@ -452,7 +424,6 @@ router.post('/handle-recording', async (req, res) => {
                     'Error logging recording info to Firebase:',
                     firebaseError
                 );
-                // Log and continue.
             }
             res.send({
                 CallSid,
@@ -466,7 +437,7 @@ router.post('/handle-recording', async (req, res) => {
         }
     } catch (error) {
         console.error('Error handling recording:', error);
-        await logErrorToFirebase('calls', error); // Could be BadRequestError or unexpected
+        await logErrorToFirebase('calls', error);
         consoleLogCall({ callSid: CallSid, status: error });
         res.status(error.statusCode || 500).send({
             message: error.message || 'Error processing recording data.',

@@ -8,7 +8,6 @@ export function handleWebSocketConnection(ws, req, dependencies) {
     console.log('WebSocket connection received.');
     console.log('Connecting to Deepgram ListenLiveClient...');
 
-    /// turn all of deepgram into a service
     const deepgramConnection = deepgram.listen.live({
         model: 'nova-3',
         encoding: 'mulaw',

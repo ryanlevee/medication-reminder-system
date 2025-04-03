@@ -20,7 +20,7 @@ router.post('/incoming-call', async (req, res) => {
         textToSpeakToHuman,
         reminderFileName
     );
-    // const reminderUrl = `${ngrokUrl}/reminder.mpeg`;
+    // const reminderUrl = `${ngrokUrl}/reminder.mpeg`;  // use static file for testing
 
     const streamUrl = `wss://${req.headers.host}/live`;
     const twiml = new twilio.twiml.VoiceResponse();
@@ -57,8 +57,6 @@ router.post('/incoming-call', async (req, res) => {
                 error.stack
             )
         );
-        // Decide if this error should prevent the Twilio response.
-        // For now, log and continue.
     }
 
     res.type('text/xml');

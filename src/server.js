@@ -37,7 +37,7 @@ app.use('/', callLogsRouter);
 
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/live' });
-const deepgram = createClient(process.env.DEEPGRAM_API_KEY); // should i do this here? or in a deepgramService.js file?
+const deepgram = createClient(process.env.DEEPGRAM_API_KEY);file?
 
 app.use((err, req, res, next) => {
     console.error('Global error handler:', err);
@@ -62,6 +62,6 @@ server.listen(port, async () => {
         await updateIncomingCallWebhookUrls();
     } catch (error) {
         console.error('Error updating webhook URLs on server start:', error);
-        // Consider if the server should even start if this fails.
+        return false
     }
 });
