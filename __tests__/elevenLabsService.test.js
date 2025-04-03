@@ -2,17 +2,14 @@
 file: __tests__/elevenLabsService.test.js
 */
 
-// NO @jest/globals import needed if not using NODE_OPTIONS flag
-
 import { EventEmitter } from 'events';
 import path from 'path';
-// Import mocked error classes AFTER jest.mock calls below
 
 // --- Mocks ---
-// Mock dotenv FIRST
+// Mock dotenv
 jest.mock('dotenv', () => ({ config: jest.fn() }));
 
-// Mock elevenlabs-node (Define mocks inside factory, expose inner mock)
+// Mock elevenlabs-node (Define mocks inside factory)
 const mockTextToSpeechStreamInternal = jest.fn();
 const mockElevenLabsInstanceInternal = {
     textToSpeechStream: mockTextToSpeechStreamInternal,
@@ -71,7 +68,6 @@ describe('ElevenLabs Service - elevenLabsTextToSpeech', () => {
     });
 
     beforeEach(async () => {
-        // Needs async for dynamic imports
         // 1. Reset Jest's module cache
         jest.resetModules();
 
@@ -118,7 +114,6 @@ describe('ElevenLabs Service - elevenLabsTextToSpeech', () => {
         if (pathJoinSpy) pathJoinSpy.mockRestore();
         // Delete env var to avoid polluting other tests
         delete process.env.NGROK_URL;
-        // jest.resetModules(); // No - reset happens in beforeEach
     });
 
     // --- Tests ---
@@ -141,7 +136,6 @@ describe('ElevenLabs Service - elevenLabsTextToSpeech', () => {
         await new Promise(setImmediate);
         mockAudioStream.emit('end');
 
-        // VVV This assertion should now pass VVV
         await expect(promise).resolves.toBe(`http://mock-ngrok.io/${fileName}`);
 
         expect(mockWriteFile).toHaveBeenCalledTimes(1); // Use retrieved handle
@@ -149,7 +143,7 @@ describe('ElevenLabs Service - elevenLabsTextToSpeech', () => {
             Buffer.from('hello '),
             Buffer.from('world'),
         ]);
-        // Use expect.any(Buffer) as it worked before for the other test
+        
         expect(mockWriteFile).toHaveBeenCalledWith(
             mockExpectedPath,
             expect.any(Buffer)
@@ -205,7 +199,7 @@ describe('ElevenLabs Service - elevenLabsTextToSpeech', () => {
         expect(mockWriteFile).toHaveBeenCalledWith(
             mockExpectedPath,
             expect.any(Buffer)
-        ); // Keep expect.any
+        );
         await expect(promise).rejects.toMatchObject({
             name: 'InternalServerError',
             message: 'Error writing TTS audio file',
