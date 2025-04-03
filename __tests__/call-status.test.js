@@ -1,6 +1,3 @@
-/*
-file: __tests__/call-status.test.js
-*/
 import request from 'supertest';
 import express from 'express';
 
@@ -23,11 +20,11 @@ jest.mock('twilio', () => {
         () => mockTwilioClientInstanceInternal
     );
 
-    // 4. **Crucially**: Attach the internal mock function to the constructor itself
-    //    to access it from tests *after* importing the mocked module.
+    // 4. Attach the internal mock function to the constructor itself
+    //    to access it from tests after importing the mocked module.
     mockTwilioConstructor._mockMessagesCreate = mockMessagesCreateInternal;
 
-    // 5. Mock TwiML parts (if needed)
+    // 5. Mock TwiML parts
     const MockVoiceResponse = jest.fn(() => ({
         toString: jest.fn().mockReturnValue('<Response></Response>'),
         say: jest.fn(),
@@ -39,7 +36,7 @@ jest.mock('twilio', () => {
     return mockTwilioConstructor;
 });
 
-// Import the mocked twilio module *after* jest.mock has run
+// Import the mocked twilio module after jest.mock has run
 import twilio from 'twilio';
 
 // 7. Retrieve the reference to the internal mock function via the attached property
@@ -99,7 +96,7 @@ jest.mock('../src/services/elevenLabsService.js', () => ({
         .mockResolvedValue('path/to/mock/audio.mp3'),
 }));
 
-// Import the router *after* all mocks are set up
+// Import the router after all mocks are set up
 import callsRouter from '../src/routes/calls.js';
 
 // --- Test Setup ---
@@ -129,7 +126,7 @@ describe('POST /call-status', () => {
 
         app = express();
         app.use(express.urlencoded({ extended: true })); // Use urlencoded parser
-        // Apply JSON parser as well, as this route CAN return JSON
+        // Apply JSON parser as well, as this route can return JSON
         app.use(express.json());
         app.use('/', callsRouter);
     });
@@ -147,7 +144,7 @@ describe('POST /call-status', () => {
         mockMessagesCreate.mockResolvedValue({
             sid: mockSmsSid,
             body: unansweredText,
-        }); // Include body for console log check if needed
+        }); // Include body for console log check
 
         const response = await request(app)
             .post('/call-status')
