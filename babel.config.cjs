@@ -4,11 +4,10 @@ module.exports = {
             '@babel/preset-env',
             {
                 targets: {
-                    node: 'current', // Or a specific Node.js version if needed
+                    node: 'current',
                 },
                 // modules: false,
             },
-            // '@babel/preset-typescript',
         ],
     ],
     plugins: [
