@@ -6,7 +6,7 @@ import express from 'express';
 
 // Define mocks INSIDE jest.mock
 jest.mock('twilio', () => {
-    // 1. Define the mock function we want to control *inside* the factory
+    // 1. Define the mock function to control *inside* the factory
     const mockMessagesCreateInternal = jest.fn();
 
     // 2. Define the instance object *inside*, referencing the internal mock
@@ -24,7 +24,7 @@ jest.mock('twilio', () => {
     );
 
     // 4. **Crucially**: Attach the internal mock function to the constructor itself
-    //    so we can access it from our tests *after* importing the mocked module.
+    //    to access it from tests *after* importing the mocked module.
     mockTwilioConstructor._mockMessagesCreate = mockMessagesCreateInternal;
 
     // 5. Mock TwiML parts (if needed)
@@ -42,10 +42,10 @@ jest.mock('twilio', () => {
 // Import the mocked twilio module *after* jest.mock has run
 import twilio from 'twilio';
 
-// 7. Retrieve the reference to the internal mock function via the property we attached
+// 7. Retrieve the reference to the internal mock function via the attached property
 const mockMessagesCreate = twilio._mockMessagesCreate;
 
-// Mock firebase-admin (keep as is)
+// Mock firebase-admin
 jest.mock('firebase-admin', () => {
     const databaseMock = jest.fn(() => ({
         ref: jest.fn(() => ({
