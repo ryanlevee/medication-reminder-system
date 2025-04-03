@@ -257,7 +257,7 @@ medication-reminder-system/
 
 This project uses [Jest](https://jestjs.io/) for unit and integration testing. Tests are located in the `__tests__` directory.
 
--   **Mocking:** External services (Twilio, Firebase Admin SDK, ElevenLabs, Deepgram) and internal utilities/modules are mocked using `jest.mock()` to allow for isolated testing of routes, services, and utility functions.
+-   **Mocking:** MAKE SURE you have set up your environment variables before running any tests.
 -   **Test Coverage:** The tests cover various scenarios for:
     -   API endpoints (`/call`, `/call-logs`).
     -   Twilio webhook handlers (`/answered`, `/call-status`, `/handle-speech`, `/handle-recording`, `/incoming-call`).
