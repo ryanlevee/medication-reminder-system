@@ -1,5 +1,3 @@
-// Note: No @jest/globals needed if running without NODE_OPTIONS flag
-
 // --- Mocks ---
 
 // Mock dotenv FIRST
@@ -67,7 +65,7 @@ describe('Twilio Config - updateIncomingCallWebhookUrls', () => {
         jest.resetModules();
         // 2. Reset process.env (important if setting vars)
         process.env = { ...OLD_ENV };
-        // 3. Set mock environment variables for THIS test run
+        // 3. Set mock environment variables for this test run specifically 
         process.env.TWILIO_ACCOUNT_SID = 'mock_ACxxxxxxxxxxxxxxx';
         process.env.TWILIO_AUTH_TOKEN = 'mock_auth_token';
         process.env.NGROK_URL = 'http://fake-ngrok-url.io';
@@ -75,12 +73,11 @@ describe('Twilio Config - updateIncomingCallWebhookUrls', () => {
         // 4. Reset mock function states
         mockEach.mockClear();
         mockItemUpdate.mockClear().mockResolvedValue(undefined); // Default success
-        // Need to get constructor mock handle if using jest.mock('twilio', () => jest.fn(...))
-        // const twilioConstructorMock = (await import('twilio')).default;
+        
         // twilioConstructorMock.mockClear();
         jest.clearAllMocks(); // Clear other mocks/spies
 
-        // 5. Dynamically import the function AFTER resetting and setting env vars
+        // 5. Dynamically import the function after resetting and setting env vars
         const configModule = await import('../src/config/twilio.js');
         updateIncomingCallWebhookUrls =
             configModule.updateIncomingCallWebhookUrls;
@@ -139,7 +136,7 @@ describe('Twilio Config - updateIncomingCallWebhookUrls', () => {
         const expectedUrl = `${process.env.NGROK_URL}/incoming-call`;
         // Configure mock 'each' to do nothing (simulate no numbers)
         mockEach.mockImplementation(async callback => {
-            // No calls to callback
+            // noop
         });
 
         await updateIncomingCallWebhookUrls();
@@ -147,15 +144,13 @@ describe('Twilio Config - updateIncomingCallWebhookUrls', () => {
         expect(mockEach).toHaveBeenCalledTimes(1);
         // Verify console log shows empty list
         expect(consoleLogSpy).toHaveBeenCalledWith(
-            `Incoming call webhook URLs updated for:  to ${expectedUrl}` // Empty list results in double space potentially
-            // Or adjust expectation based on exact string formatting for empty array join
-            // expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('updated for: '));
+            `Incoming call webhook URLs updated for:  to ${expectedUrl}` // Empty list results in double space
         );
         expect(consoleErrorSpy).not.toHaveBeenCalled();
     });
     it('should throw TwilioApiError if item.update fails', async () => {
         const updateError = new Error('Twilio API error 404');
-        // Use jest.fn() directly for the update mock within the item
+        // jest.fn() directly for the update mock within the item
         const mockItemUpdateFn = jest.fn().mockRejectedValue(updateError);
         const mockItem1 = {
             friendlyName: 'FailingNum',
@@ -166,36 +161,32 @@ describe('Twilio Config - updateIncomingCallWebhookUrls', () => {
             await callback(mockItem1);
         });
 
-        // FIX: Call only once with rejects.toThrow
         await expect(updateIncomingCallWebhookUrls()).rejects.toThrow(
             TwilioApiError
         );
 
         // Assertions after the single call
-        expect(mockEach).toHaveBeenCalledTimes(1); // Should be called once now
+        expect(mockEach).toHaveBeenCalledTimes(1);
         expect(mockItemUpdateFn).toHaveBeenCalledTimes(1); // Check the specific item's mock update
         expect(consoleErrorSpy).toHaveBeenCalledWith(
             'Error updating Twilio webhook URLs:',
             updateError.message
         );
-        // Removed assertion checking if TwilioApiError constructor was called
     });
 
     it('should throw TwilioApiError if client.incomingPhoneNumbers.each fails', async () => {
         const eachError = new Error('Cannot fetch numbers');
         mockEach.mockRejectedValue(eachError);
 
-        // FIX: Call only once with rejects.toThrow
         await expect(updateIncomingCallWebhookUrls()).rejects.toThrow(
             TwilioApiError
         );
 
         // Assertions after the single call
-        expect(mockEach).toHaveBeenCalledTimes(1); // Should be called once now
+        expect(mockEach).toHaveBeenCalledTimes(1);
         expect(consoleErrorSpy).toHaveBeenCalledWith(
             'Error updating Twilio webhook URLs:',
             eachError.message
         );
-        // Removed assertion checking if TwilioApiError constructor was called
     });
 });
