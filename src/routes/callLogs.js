@@ -5,7 +5,7 @@
  * When retrieving multiple logs, the response augments each log entry with
  * `finalTranscript` and `recordingUrl` fields if found for the associated call.
  *
- * @requires date-fns - For robust date parsing and validation.
+ * @requires date-fns - For robust date parsing and validation. 
  * @requires express - Web framework for Node.js.
  * @requires ../config/firebase - Firebase Admin SDK instance.
  * @requires ../errors/BadRequestError - Custom error for invalid client requests (e.g., bad dates).
