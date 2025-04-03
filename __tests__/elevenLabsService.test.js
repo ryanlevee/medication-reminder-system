@@ -1,7 +1,3 @@
-/*
-file: __tests__/elevenLabsService.test.js
-*/
-
 import { EventEmitter } from 'events';
 import path from 'path';
 
@@ -9,7 +5,7 @@ import path from 'path';
 // Mock dotenv
 jest.mock('dotenv', () => ({ config: jest.fn() }));
 
-// Mock elevenlabs-node (Define mocks inside factory)
+// Mock elevenlabs-node (Defining mocks inside factory)
 const mockTextToSpeechStreamInternal = jest.fn();
 const mockElevenLabsInstanceInternal = {
     textToSpeechStream: mockTextToSpeechStreamInternal,
@@ -18,7 +14,7 @@ const mockConstructor = jest.fn(() => mockElevenLabsInstanceInternal);
 mockConstructor._mockTextToSpeechStream = mockTextToSpeechStreamInternal;
 jest.mock('elevenlabs-node', () => mockConstructor);
 
-// Mock fs/promises (Define mock inside factory)
+// Mock fs/promises (Defining mock inside factory)
 const mockWriteFileInternal = jest.fn();
 jest.mock('fs/promises', () => ({
     writeFile: mockWriteFileInternal,
@@ -81,7 +77,7 @@ describe('ElevenLabs Service - elevenLabsTextToSpeech', () => {
         mockConstructor.mockClear(); // Clear constructor calls if needed
         // jest.clearAllMocks(); // Optional: Usually not needed after resetModules + specific clears
 
-        // 4. Dynamically import the service *after* setting env var and resetting
+        // 4. Dynamically import the service after setting env var and resetting
         // Babel should transform dynamic import() correctly in default environment
         const serviceModule = await import(
             '../src/services/elevenLabsService.js'
