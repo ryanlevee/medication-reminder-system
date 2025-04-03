@@ -764,7 +764,7 @@ router.post('/call-status', async (req, res) => {
 
             // Send error response back for the webhook
             // Note: Twilio might retry the webhook if it gets a 5xx error.
-            // Sending 200 OK might be preferable if you don't want retries. Choose based on desired behavior.
+            // Sending 200 OK might be preferable if we don't want retries. Choose based on desired behavior.
             // return res.status(500).send({ error: 'Failed to send SMS fallback.' });
             return res.status(200).send({
                 message: 'SMS fallback attempt failed.',

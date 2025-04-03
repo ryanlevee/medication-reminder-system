@@ -152,7 +152,7 @@ router.get('/call-logs', async (req, res) => {
 
             // Filter the CallSids based on whether *any* log within them falls in the range
             // This approach keeps all logs for a call if at least one matches the date range.
-            // Alternatively, you could filter individual log entries here.
+            // Alternatively, we could filter individual log entries here.
             filteredCallSids = filteredCallSids.filter(sidKey => {
                 const callLogs = allLogsData[sidKey];
                 for (const logId in callLogs) {
