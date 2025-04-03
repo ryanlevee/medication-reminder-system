@@ -257,7 +257,7 @@ medication-reminder-system/
 
 This project uses [Jest](https://jestjs.io/) for unit and integration testing. Tests are located in the `__tests__` directory.
 
--   **Mocking:** MAKE SURE you have set up your environment variables before running any tests.
+-   **Mocking:** MAKE SURE you have set up your environment variables (API keys, URLs) and are running a valid ngrok session before running any tests. The integration tests require these for proper execution.
 -   **Test Coverage:** The tests cover various scenarios for:
     -   API endpoints (`/call`, `/call-logs`).
     -   Twilio webhook handlers (`/answered`, `/call-status`, `/handle-speech`, `/handle-recording`, `/incoming-call`).
