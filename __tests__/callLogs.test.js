@@ -4,9 +4,7 @@ import express from 'express';
 
 // --- Mocks ---
 
-// REMOVED: jest.mock('date-fns', ...) - We will use the actual library
-
-// --- Define Controllable Mocks Globally ---
+// --- Define Controllable Mocks ---
 const mockDbRef = {
     child: jest.fn(),
     once: jest.fn(),
@@ -16,8 +14,7 @@ const mockDatabaseFn = jest.fn(() => ({
     ref: mockRefFn,
 }));
 
-// --- Mock config/firebase.js Directly ---
-// This seems to be working now for basic DB calls
+// --- Mock config/firebase.js ---
 jest.mock('../src/config/firebase.js', () => ({
     admin: {
         database: mockDatabaseFn,
@@ -31,10 +28,9 @@ jest.mock('../src/utils/firebase.js', () => ({
     logToFirebase: jest.fn().mockResolvedValue(undefined),
     logErrorToFirebase: jest.fn().mockResolvedValue(undefined),
 }));
-// We will dynamically import logErrorToFirebase in beforeEach
+// will dynamically import logErrorToFirebase in beforeEach
 
 // --- Mock Error classes ---
-// Use the corrected mock constructor
 const createMockError = (name, defaultMessage, defaultStatusCode) => {
     return class extends Error {
         constructor(message) {
@@ -108,11 +104,6 @@ describe('GET /call-logs', () => {
         mockDbRef.once.mockClear();
         jest.clearAllMocks();
 
-        // Apply config mock (still needed)
-        // If top-level jest.mock works, we don't need doMock here
-        // If it doesn't, uncomment doMock:
-        // jest.doMock('../src/config/firebase.js', () => ({ admin: { database: mockDatabaseFn, ... }}));
-
         // Dynamically Import Router and Utils
         const routerModule = await import('../src/routes/callLogs.js');
         callLogsRouter = routerModule.default;
@@ -145,7 +136,7 @@ describe('GET /call-logs', () => {
 
     afterEach(() => {
         // Reset modules ONLY if using jest.doMock
-        jest.resetModules(); // Comment out if not using doMock
+        jest.resetModules();
     });
 
     // --- Tests ---
@@ -207,7 +198,6 @@ describe('GET /call-logs', () => {
         const response = await request(app).get(
             `/call-logs?startDate=${startDate}&endDate=${endDate}`
         );
-        // VVV Assertion to check VVV
         expect(response.statusCode).toBe(200);
         expect(mockDatabaseFn).toHaveBeenCalledTimes(1);
         expect(mockRefFn).toHaveBeenCalledWith('logs');
@@ -215,7 +205,6 @@ describe('GET /call-logs', () => {
         expect(response.body.logs).toHaveLength(3);
     });
 
-    // Replace the old 'yyyy-MM-dd HH:mm:ss' test with this one using ISO format
     it('should filter logs by date range (using ISO UTC strings)', async () => {
         // Define the range clearly in UTC using ISO 8601 format
         // Test range: 11:58:30 UTC to 11:59:30 UTC
@@ -240,8 +229,8 @@ describe('GET /call-logs', () => {
         expect(mockRefFn).toHaveBeenCalledWith('logs');
         expect(mockDbRef.once).toHaveBeenCalledWith('value');
 
-        // VVV Check the filtering result VVV
-        expect(response.body.logs).toHaveLength(4); // Should now find the 4 logs
+        // Check the filtering result
+        expect(response.body.logs).toHaveLength(4);
         expect(response.body.totalLogs).toBe(4);
         // Check that the expected events are present
         expect(response.body.logs.map(log => log.event)).toEqual(
@@ -266,7 +255,7 @@ describe('GET /call-logs', () => {
         const response = await request(app).get(
             `/call-logs?startDate=invalid-date&endDate=2025-01-01`
         );
-        // VVV Assertion to check VVV
+        // Check assertion
         expect(response.statusCode).toBe(400);
         expect(mockDatabaseFn).toHaveBeenCalledTimes(1);
         expect(mockRefFn).toHaveBeenCalledWith('logs');
