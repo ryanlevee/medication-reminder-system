@@ -1,6 +1,6 @@
 // --- Mocks ---
 
-// Mock dotenv FIRST
+// Mock dotenv
 jest.mock('dotenv', () => ({
     config: jest.fn(),
 }));
@@ -36,7 +36,7 @@ jest.mock('../src/errors/TwilioApiError.js', () =>
 );
 // Error class will be imported dynamically in beforeEach
 
-import TwilioApiError from '../src/errors/TwilioApiError.js'; // Import mocked version
+import TwilioApiError from '../src/errors/TwilioApiError.js';
 
 // --- Test Setup ---
 describe('Twilio Config - updateIncomingCallWebhookUrls', () => {
@@ -46,7 +46,7 @@ describe('Twilio Config - updateIncomingCallWebhookUrls', () => {
     // Store original env vars
     const OLD_ENV = process.env;
 
-    // Console Spies
+    // --- Console Spies ---
     let consoleLogSpy, consoleErrorSpy;
     beforeAll(() => {
         consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
