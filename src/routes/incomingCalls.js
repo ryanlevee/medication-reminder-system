@@ -1,10 +1,10 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import twilio from 'twilio';
-import { logToFirebase, logErrorToFirebase } from '../utils/firebase.js';
 import InternalServerError from '../errors/InternalServerError.js';
-import { TtsHolder } from '../storage/ttsHolder.js';
 import { elevenLabsTextToSpeech } from '../services/elevenLabsService.js';
+import { TtsHolder } from '../storage/ttsHolder.js';
+import { logErrorToFirebase, logToFirebase } from '../utils/firebase.js';
 
 dotenv.config();
 const router = express.Router();
@@ -15,8 +15,11 @@ router.post('/incoming-call', async (req, res) => {
     const { CallSid, From, To } = req.body;
 
     const textToSpeakToHuman = TtsHolder.reminder;
-    const reminderFileName = 'reminder.mpeg'
-    const reminderUrl = await elevenLabsTextToSpeech(textToSpeakToHuman, reminderFileName);
+    const reminderFileName = 'reminder.mpeg';
+    const reminderUrl = await elevenLabsTextToSpeech(
+        textToSpeakToHuman,
+        reminderFileName
+    );
     // const reminderUrl = `${ngrokUrl}/reminder.mpeg`;
 
     const streamUrl = `wss://${req.headers.host}/live`;

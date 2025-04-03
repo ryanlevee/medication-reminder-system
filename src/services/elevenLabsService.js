@@ -1,14 +1,11 @@
-import ElevenLabsClient from 'elevenlabs-node';
-import path, { dirname } from 'path';
-import fs from 'fs/promises';
-import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import ElevenLabsClient from 'elevenlabs-node';
+import fs from 'fs/promises';
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
 import ElevenLabsApiError from '../errors/ElevenLabsApiError.js';
 import InternalServerError from '../errors/InternalServerError.js';
-import { TtsHolder } from '../storage/ttsHolder.js';
 
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = dirname(__filename);
 dotenv.config();
 
 const elevenLabs = new ElevenLabsClient({
@@ -36,7 +33,6 @@ async function elevenLabsTextToSpeech(textInput, fileName) {
             });
             audioStream.on('end', async () => {
                 const audioBuffer = Buffer.concat(chunks);
-                // const filePath = path.join(__dirname, '../public', fileName); // Adjust path as needed
                 const currentFilePath = fileURLToPath(import.meta.url); // Plugin will transform this
                 const currentDir = dirname(currentFilePath);
                 const filePath = path.join(currentDir, '../public', fileName); // Use calculated dir
@@ -78,3 +74,4 @@ async function elevenLabsTextToSpeech(textInput, fileName) {
 }
 
 export { elevenLabsTextToSpeech };
+
