@@ -1,8 +1,8 @@
 import request from 'supertest';
 import express from 'express';
-import twilioMock from 'twilio'; // Keep the renamed import
+import twilioMock from 'twilio';
 
-// Mock twilio at the very top
+// Mock twilio
 jest.mock('twilio', () => {
     const mockCreate = jest.fn().mockResolvedValue({ sid: 'CA1234567890' });
     const mockCalls = { create: mockCreate };
@@ -57,7 +57,7 @@ jest.mock('firebase-admin', () => {
     };
 });
 
-// Import your local firebase utils *after* mocking firebase-admin
+// Import local firebase utils *after* mocking firebase-admin
 jest.mock('../src/utils/firebase.js', () => ({
     logToFirebase: jest.fn().mockResolvedValue(undefined),
     logErrorToFirebase: jest.fn().mockResolvedValue(undefined), // Also mock logErrorToFirebase for completeness
@@ -69,7 +69,7 @@ let app;
 beforeEach(() => {
     // Create a new Express app for each test to avoid state conflicts
     app = express();
-    app.use(express.json()); // Make sure your app can parse JSON
+    app.use(express.json()); // Make sure app can parse JSON
     app.use('/', callsRouter);
 });
 
