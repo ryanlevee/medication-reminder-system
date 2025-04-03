@@ -3,11 +3,11 @@ file: __tests__/handle-speech.test.js
 */
 import request from 'supertest';
 import express from 'express';
-import twilio from 'twilio'; // Import the mocked version
+import twilio from 'twilio';
 
 // --- Mocks ---
 
-// Mock Twilio TwiML generation (similar to answered.test.js)
+// Mock Twilio TwiML generation
 let mockTwimlInstance;
 const mockSay = jest.fn();
 const mockHangup = jest.fn();
@@ -23,7 +23,7 @@ jest.mock('twilio', () => {
         return mockTwimlInstance;
     });
 
-    // Mock the top-level client constructor (not directly used by /handle-speech but good practice)
+    // Mock the top-level client constructor (not directly used by /handle-speech but keeping for extensibility)
     const mockTwilioClient = jest.fn(() => ({}));
 
     // Attach the twiml namespace and VoiceResponse class mock
