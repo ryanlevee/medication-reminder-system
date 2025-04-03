@@ -22,7 +22,7 @@ This project is a Node.js-based voice-driven medication reminder system. It util
     -   Outputs concise call interaction summaries to the console during operation.
     -   Stores detailed event logs (initiation, status updates, TTS/LLM interactions, transcripts, recordings) and error logs in Firebase Realtime Database, organized by CallSid.
     -   Logs the URL of call recordings to Firebase.
--   **Call Log API (Bonus Feature):**
+-   **Call Log API:**
     -   Provides a `GET /call-logs` REST API endpoint to retrieve stored call logs from Firebase.
     -   Supports filtering logs by specific `callSid`.
     -   Supports filtering logs by `startDate` and `endDate`.
