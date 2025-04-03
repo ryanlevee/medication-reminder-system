@@ -38,7 +38,7 @@ if (!ngrokUrl) {
     console.error(
         'FATAL ERROR: NGROK_URL environment variable is not set. Static assets might fail.'
     );
-    // process.exit(1); // Optional: Exit if ngrok is critical
+    // process.exit(1); // Optional: Exit if ngrok is critical... only applies to incoming at this point though...
 }
 
 /**
