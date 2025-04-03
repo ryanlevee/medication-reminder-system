@@ -93,8 +93,7 @@ Before you begin, ensure you have the following installed and configured:
 4.  **Twilio Setup:**
     * Find your **Account SID** and **Auth Token** in your Twilio console dashboard.
     * Purchase or provision at least one Twilio phone number.
-        * A **Toll-Free** number is recommended for the `TWILIO_PHONE_NUMBER_TOLL_FREE` environment variable (used for making outbound calls).
-        * An **SMS-capable** number (often a local paid number) is needed for the `TWILIO_PHONE_NUMBER_PAID` environment variable (used for SMS fallbacks). This can be the same number if it supports both voice and SMS, but verify capabilities.
+        * An **SMS-capable** number (often a local paid number) is needed for the `TWILIO_PHONE_NUMBER` environment variable. This can be used for inbound and outbound calls as well if it supports both voice and SMS, but verify capabilities.
 
 5.  **External API Keys:**
     * **ElevenLabs:** Get your API Key and a Voice ID from your ElevenLabs account settings/voice lab.
@@ -111,8 +110,7 @@ Before you begin, ensure you have the following installed and configured:
         # Twilio Configuration
         TWILIO_ACCOUNT_SID=<Your Twilio Account SID>
         TWILIO_AUTH_TOKEN=<Your Twilio Auth Token>
-        TWILIO_PHONE_NUMBER_TOLL_FREE=<Your Toll-Free Twilio Number, e.g., +1800...>
-        TWILIO_PHONE_NUMBER_PAID=<Your SMS-Capable Twilio Number, e.g., +1234...>
+        TWILIO_PHONE_NUMBER=<Your SMS-Capable Twilio Number, e.g., +1234...>
 
         # ElevenLabs Configuration
         ELEVENLABS_API_KEY=<Your ElevenLabs API Key>
@@ -164,7 +162,7 @@ Before you begin, ensure you have the following installed and configured:
         Successfully updated incoming call webhook URLs... (or an error message)
         ----------------------------------
         ```
-    * **Note:** The server automatically attempts to update your Twilio number's voice webhook URL using the `NGROK_URL`. If this fails, you may need to manually configure the Voice URL for your `TWILIO_PHONE_NUMBER_TOLL_FREE` number in the Twilio console to point to `<Your Ngrok URL>/incoming-call`.
+    * **Note:** The server automatically updates your Twilio number's voice webhook URL using the `NGROK_URL`. If this fails, you may need to manually configure the Voice URL for your `TWILIO_PHONE_NUMBER` number in the Twilio console to point to `<Your Ngrok URL>/incoming-call`.
 
 ## Usage
 
@@ -182,7 +180,7 @@ Before you begin, ensure you have the following installed and configured:
 
 ### Receiving an Inbound Call
 
--   Call the Twilio phone number configured as `TWILIO_PHONE_NUMBER_TOLL_FREE` from any phone.
+-   Call the Twilio phone number configured as `TWILIO_PHONE_NUMBER` from any phone.
 -   The system should answer, play the reminder prompt, and wait for your speech input.
 
 ### Reviewing Logs

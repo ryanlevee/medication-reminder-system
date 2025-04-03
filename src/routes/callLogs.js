@@ -2,6 +2,8 @@
  * @fileoverview Express router for handling call log retrieval requests.
  * Provides an endpoint to fetch call logs stored in Firebase Realtime Database,
  * supporting filtering by Call SID, date range, and pagination.
+ * When retrieving multiple logs, the response augments each log entry with
+ * `finalTranscript` and `recordingUrl` fields if found for the associated call.
  *
  * @requires date-fns - For robust date parsing and validation.
  * @requires express - Web framework for Node.js.
@@ -18,7 +20,7 @@ import { admin } from '../config/firebase.js';
 import BadRequestError from '../errors/BadRequestError.js';
 import FirebaseError from '../errors/FirebaseError.js';
 import NotFoundError from '../errors/NotFoundError.js';
-import { logErrorToFirebase } from '../utils/firebase.js'; // Assuming logErrorToFirebase is used, otherwise remove.
+import { logErrorToFirebase } from '../utils/firebase.js';
 
 const router = express.Router();
 const db = admin.database();
@@ -33,7 +35,6 @@ const DEFAULT_PAGE_SIZE = 100; // Default number of logs per page
  * @returns {Date} The corresponding JavaScript Date object.
  */
 function firebaseTimestampToDate(timestamp) {
-    // Firebase timestamps are typically numbers representing milliseconds since epoch
     return new Date(timestamp);
 }
 
@@ -45,6 +46,9 @@ function firebaseTimestampToDate(timestamp) {
  * If `startDate` and `endDate` are provided, it filters logs within that time range (inclusive).
  * Dates can be in ISO 8601 format or 'yyyy-MM-dd HH:mm:ss'.
  * Pagination is controlled by `page` (page number, defaults to 1) and `pageSize` (logs per page, defaults to 100).
+ * When fetching multiple logs (not by specific CallSid), each log entry in the response's `logs` array
+ * is augmented with `finalTranscript` and `recordingUrl` fields if that information exists
+ * anywhere within the logs for that specific CallSid.
  *
  * @param {string} [req.query.callSid] - Optional. The specific Twilio Call SID to filter logs by.
  * @param {string} [req.query.startDate] - Optional. The start date for filtering (ISO 8601 or 'yyyy-MM-dd HH:mm:ss'). Requires endDate.
@@ -58,11 +62,22 @@ function firebaseTimestampToDate(timestamp) {
  * - Otherwise: Returns JSON object with pagination info:
  * ```json
  * {
- * "logs": [Array<object>], // Array of log objects for the current page
- * "totalLogs": number,     // Total number of logs matching the filters
- * "totalPages": number,    // Total number of pages
- * "currentPage": number,   // Current page number
- * "pageSize": number       // Number of logs requested per page
+ * "logs": [
+ * {
+ * "callSid": "CA...",
+ * "logId": "-LogKey...",
+ * "timestamp": 1678886400000,
+ * "event": "call_initiated",
+ * // ... other log data ...
+ * "finalTranscript": "Yes I took my meds...", // Added if available for this callSid
+ * "recordingUrl": "[https://api.twilio.com/](https://api.twilio.com/)..." // Added if available for this callSid
+ * },
+ * // ... more log objects
+ * ],
+ * "totalLogs": number,
+ * "totalPages": number,
+ * "currentPage": number,
+ * "pageSize": number
  * }
  * ```
  * On error:
@@ -80,30 +95,26 @@ router.get('/call-logs', async (req, res) => {
         callSid,
         startDate: startDateStr,
         endDate: endDateStr,
-        page, // Page number requested
+        page,
     } = req.query;
-    // Parse pageSize, defaulting if invalid or missing
     const pageSize = parseInt(req.query.pageSize, 10) || DEFAULT_PAGE_SIZE;
-    // Parse page number, defaulting if invalid or missing
     const pageNumber = parseInt(page, 10) || 1;
     let startDate, endDate;
 
     try {
-        let query = logsRef; // Start with the base reference to all logs
-        let allLogsData = {}; // To hold logs retrieved from Firebase
+        let query = logsRef;
+        let allLogsData = {}; // Raw log data from Firebase { callSid: { logId: logData } }
 
         // --- Filtering Logic ---
 
-        // 1. Filter by specific CallSid
+        // 1. Filter by specific CallSid (return immediately if found)
         if (callSid) {
             console.log(`Workspaceing logs for specific CallSid: ${callSid}`);
             const snapshot = await query.child(callSid).once('value');
-            const callLogs = snapshot.val();
-            if (callLogs) {
-                // If found, return only these logs immediately (pagination doesn't apply here)
-                return res.json({ [callSid]: callLogs });
+            const specificCallLogs = snapshot.val();
+            if (specificCallLogs) {
+                return res.json({ [callSid]: specificCallLogs }); // Return raw logs for specific SID
             } else {
-                // If CallSid specified but not found, throw 404
                 throw new NotFoundError(
                     `No logs found for CallSid: ${callSid}`
                 );
@@ -112,82 +123,118 @@ router.get('/call-logs', async (req, res) => {
             // Fetch all logs if no specific CallSid is given
             console.log('Fetching all call logs for potential filtering...');
             const snapshot = await query.once('value');
-            allLogsData = snapshot.val() || {}; // Use empty object if no logs exist
+            allLogsData = snapshot.val() || {};
         }
 
-        let filteredLogs = {}; // To hold logs after date filtering (if applied)
+        // --- Date Filtering and Data Processing (if fetching all logs) ---
+        let filteredCallSids = Object.keys(allLogsData); // Start with all CallSids
 
         // 2. Filter by Date Range (only if both dates are provided)
         if (startDateStr && endDateStr) {
             console.log(
                 `Applying date filter: ${startDateStr} to ${endDateStr}`
             );
-            // Attempt parsing ISO 8601 first
+            // (Date parsing logic remains the same as before)
             startDate = parseISO(startDateStr);
             endDate = parseISO(endDateStr);
-
-            // If ISO parsing fails or results in invalid dates, try 'yyyy-MM-dd HH:mm:ss'
             if (!isValid(startDate) || !isValid(endDate)) {
-                console.log(
-                    'ISO parsing failed or invalid, trying yyyy-MM-dd HH:mm:ss format...'
-                );
                 const formatString = 'yyyy-MM-dd HH:mm:ss';
                 startDate = parse(startDateStr, formatString, new Date());
                 endDate = parse(endDateStr, formatString, new Date());
-
-                // If both parsing attempts fail, throw BadRequestError
                 if (!isValid(startDate) || !isValid(endDate)) {
                     throw new BadRequestError(
                         "Invalid date format. Please use ISO 8601 (e.g., '2023-10-27T10:00:00Z') or 'yyyy-MM-dd HH:mm:ss'."
                     );
                 }
             }
-
             const startTimestamp = startDate.getTime();
             const endTimestamp = endDate.getTime();
 
-            // Iterate through all fetched logs and filter by timestamp
-            for (const callSidKey in allLogsData) {
-                const callLogs = allLogsData[callSidKey]; // Logs for a specific CallSid
-                const logsForThisCallSid = {};
+            // Filter the CallSids based on whether *any* log within them falls in the range
+            // This approach keeps all logs for a call if at least one matches the date range.
+            // Alternatively, you could filter individual log entries here.
+            filteredCallSids = filteredCallSids.filter(sidKey => {
+                const callLogs = allLogsData[sidKey];
                 for (const logId in callLogs) {
                     const log = callLogs[logId];
-                    // Check if the log has a timestamp and falls within the range
-                    if (
-                        log.timestamp &&
-                        firebaseTimestampToDate(log.timestamp).getTime() >=
-                            startTimestamp &&
-                        firebaseTimestampToDate(log.timestamp).getTime() <=
-                            endTimestamp
-                    ) {
-                        logsForThisCallSid[logId] = log; // Add log if it matches
+                    if (log.timestamp) {
+                        const logTime = firebaseTimestampToDate(
+                            log.timestamp
+                        ).getTime();
+                        if (
+                            logTime >= startTimestamp &&
+                            logTime <= endTimestamp
+                        ) {
+                            return true; // Keep this CallSid if any log matches
+                        }
                     }
                 }
-                // Only include CallSids that have matching logs after filtering
-                if (Object.keys(logsForThisCallSid).length > 0) {
-                    filteredLogs[callSidKey] = logsForThisCallSid;
-                }
-            }
-        } else {
-            // No date filter applied, use all fetched logs
-            filteredLogs = allLogsData;
+                return false; // Discard this CallSid if no logs match
+            });
+            console.log(
+                `CallSids remaining after date filter: ${filteredCallSids.length}`
+            );
         }
 
-        // --- Pagination Logic ---
+        // 3. Process Logs: Extract summary info and flatten
+        let processedLogsWithSummary = {}; // { callSid: { logs: {...}, finalTranscript: '...', recordingUrl: '...' } }
 
-        // Flatten the filtered logs into a single array for pagination
-        // Each element includes the callSid it belongs to
-        const allFilteredLogsArray = Object.entries(filteredLogs).flatMap(
-            ([callSidKey, callLogs]) =>
-                Object.entries(callLogs).map(([logId, log]) => ({
-                    callSid: callSidKey,
-                    logId: logId, // Include logId for potential use
-                    ...log,
-                }))
+        // Iterate only through the filtered CallSids
+        for (const sidKey of filteredCallSids) {
+            const originalLogs = allLogsData[sidKey];
+            if (!originalLogs) continue; // Should not happen if filtering worked, but safety check
+
+            processedLogsWithSummary[sidKey] = {
+                logs: originalLogs,
+                finalTranscript: null,
+                recordingUrl: null,
+            };
+
+            // Find the latest transcript and recording URL for this call
+            let latestTranscriptTime = 0;
+            let latestRecordingTime = 0;
+
+            for (const logId in originalLogs) {
+                const log = originalLogs[logId];
+                const logTime = log.timestamp || 0;
+
+                if (
+                    log.event === 'deepgram_transcript_final' &&
+                    log.transcript &&
+                    logTime >= latestTranscriptTime
+                ) {
+                    processedLogsWithSummary[sidKey].finalTranscript =
+                        log.transcript;
+                    latestTranscriptTime = logTime;
+                }
+                if (
+                    log.event === 'recording_handled' &&
+                    log.recordingUrl &&
+                    logTime >= latestRecordingTime
+                ) {
+                    processedLogsWithSummary[sidKey].recordingUrl =
+                        log.recordingUrl;
+                    latestRecordingTime = logTime;
+                }
+            }
+        }
+
+        // Flatten into a single array for sorting and pagination, adding summary fields
+        const allFilteredLogsArray = Object.entries(
+            processedLogsWithSummary
+        ).flatMap(([callSidKey, callData]) =>
+            Object.entries(callData.logs).map(([logId, log]) => ({
+                callSid: callSidKey,
+                logId: logId,
+                finalTranscript: callData.finalTranscript, // Add summary field
+                recordingUrl: callData.recordingUrl, // Add summary field
+                ...log,
+            }))
         );
 
-        // Sort logs by timestamp (descending - newest first) before pagination
-        // Assuming log.timestamp exists and is a number
+        // --- Sorting and Pagination Logic ---
+
+        // Sort logs by timestamp (descending - newest first)
         allFilteredLogsArray.sort(
             (a, b) => (b.timestamp || 0) - (a.timestamp || 0)
         );
@@ -195,15 +242,16 @@ router.get('/call-logs', async (req, res) => {
         // Calculate pagination indices
         const totalLogs = allFilteredLogsArray.length;
         const totalPages = Math.ceil(totalLogs / pageSize);
-        const startIndex = (pageNumber - 1) * pageSize;
-        // endIndex is exclusive for slice
-        const endIndex = Math.min(startIndex + pageSize, totalLogs); // Ensure endIndex doesn't exceed array bounds
+        // Ensure pageNumber is within valid range
+        const currentPage = Math.max(1, Math.min(pageNumber, totalPages || 1));
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, totalLogs);
 
         // Slice the array to get logs for the requested page
         const paginatedLogs = allFilteredLogsArray.slice(startIndex, endIndex);
 
         console.log(
-            `Returning page ${pageNumber}/${totalPages} with ${paginatedLogs.length} logs (pageSize: ${pageSize}, total matching: ${totalLogs})`
+            `Returning page ${currentPage}/${totalPages} with ${paginatedLogs.length} logs (pageSize: ${pageSize}, total matching: ${totalLogs})`
         );
 
         // --- Response ---
@@ -211,13 +259,12 @@ router.get('/call-logs', async (req, res) => {
             logs: paginatedLogs,
             totalLogs,
             totalPages,
-            currentPage: pageNumber,
+            currentPage: currentPage, // Return the potentially adjusted current page
             pageSize,
         });
     } catch (error) {
         console.error('Error fetching call logs:', error);
-
-        // Handle known operational errors first
+        // Error handling remains the same as before
         if (
             error instanceof BadRequestError ||
             error instanceof NotFoundError
@@ -226,22 +273,17 @@ router.get('/call-logs', async (req, res) => {
                 .status(error.statusCode)
                 .json({ message: error.message });
         } else if (error instanceof FirebaseError) {
-            // Handle specific Firebase errors
             return res.status(500).json({
                 message: 'Failed to fetch call logs due to a database error.',
-                error: error.message, // Optionally include original error message
+                error: error.message,
             });
         } else {
-            // Handle unexpected errors
-            // Log the detailed error for debugging
             await logErrorToFirebase('callLogsRoute', error).catch(logErr => {
                 console.error('Failed to log error to Firebase:', logErr);
             });
             return res.status(500).json({
                 message:
                     'An unexpected error occurred while fetching call logs.',
-                // Avoid sending detailed stack traces to the client in production
-                // error: process.env.NODE_ENV === 'development' ? error.stack : undefined
             });
         }
     }

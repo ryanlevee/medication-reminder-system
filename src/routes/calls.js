@@ -114,7 +114,7 @@ router.post('/call', async (req, res) => {
         console.log(`Initiating call to: ${phoneNumber}`);
         const call = await twilioClient.calls.create({
             to: phoneNumber,
-            from: process.env.TWILIO_PHONE_NUMBER_TOLL_FREE, // Ensure this is a valid Twilio number
+            from: process.env.TWILIO_PHONE_NUMBER, // Ensure this is a valid Twilio number
             url: `${ngrokUrl}/answered`, // Webhook for when the call is answered
             statusCallback: `${ngrokUrl}/call-status`, // Webhook for status updates
             statusCallbackEvent: [
@@ -141,7 +141,7 @@ router.post('/call', async (req, res) => {
                 event: 'call_initiated',
                 status,
                 phoneNumber, // Log the target number
-                from: process.env.TWILIO_PHONE_NUMBER_TOLL_FREE, // Log the source number
+                from: process.env.TWILIO_PHONE_NUMBER, // Log the source number
             });
         } catch (firebaseError) {
             console.error(
@@ -714,8 +714,7 @@ router.post('/call-status', async (req, res) => {
                 body: smsText,
                 to: To, // The original recipient's number
                 from:
-                    process.env.TWILIO_PHONE_NUMBER_PAID ||
-                    process.env.TWILIO_PHONE_NUMBER_TOLL_FREE, // Use a SMS-capable Twilio number
+                    process.env.TWILIO_PHONE_NUMBER
             });
 
             const smsLogStatus = `SMS fallback sent successfully for ${CallStatus} call ${CallSid}. SMS SID: ${sms.sid}`;

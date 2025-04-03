@@ -10,6 +10,7 @@
 
 import { GoogleGenAI, HarmBlockThreshold, HarmCategory } from '@google/genai';
 import dotenv from 'dotenv';
+import { getSystemInstruction } from '../prompts/geminiSystemPrompt.js';
 
 // Load environment variables
 dotenv.config();
@@ -207,6 +208,11 @@ async function generateLlmResponse(speechText, history = []) {
     }
 
     try {
+        const systemInstructionConfig = getSystemInstruction(
+            FACTUAL_DATA,
+            relaxedSafetySettings
+        ); // Generate prompt object
+
         // --- Create Chat Session using ai.chats.create with Config ---
         // Creates a new chat session, passing the model name, existing history,
         // and a config object containing system instructions, generation settings, and safety settings.
@@ -215,10 +221,11 @@ async function generateLlmResponse(speechText, history = []) {
             history: history,
             config: {
                 // Pass configuration object here
-                systemInstruction: {
-                    // Spread the first (and only) element of SYSTEM_INSTRUCTION_TEXT
-                    ...SYSTEM_INSTRUCTION_TEXT[0],
-                },
+                systemInstruction: systemInstructionConfig, // Use the generated object
+                // systemInstruction: {
+                //     // Spread the first (and only) element of SYSTEM_INSTRUCTION_TEXT
+                //     ...SYSTEM_INSTRUCTION_TEXT[0],
+                // },
                 generationConfig: {
                     // Specify generation parameters
                     temperature: 0.7,
