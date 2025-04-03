@@ -1,9 +1,6 @@
-/*
-file: answered.test.js
-*/
 import request from 'supertest';
 import express from 'express';
-import twilio from 'twilio'; // Import the mocked version
+import twilio from 'twilio';
 
 // --- Mocks ---
 
@@ -91,7 +88,7 @@ jest.mock('../src/services/elevenLabsService.js', () => ({
         .mockResolvedValue('path/to/mock/audio.mp3'),
 }));
 
-// Import the router *after* all mocks are set up
+// Import the router after all mocks are set up
 import callsRouter from '../src/routes/calls.js';
 
 // --- Console Output Suppression ---
@@ -111,7 +108,7 @@ afterEach(() => {
     consoleErrorSpy.mockRestore();
 });
 
-// --- Existing Test Setup (Keep this as it is) ---
+// --- Existing Test Setup ---
 let app;
 
 beforeEach(() => {
