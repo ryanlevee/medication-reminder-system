@@ -1,10 +1,5 @@
-/* file: __tests__/websocketHandler.test.js */
-
-// NO @jest/globals import needed
-
-import { EventEmitter } from 'events'; // Use EventEmitter for mockWs
+import { EventEmitter } from 'events';
 import path from 'path';
-// Import mocked error classes AFTER jest.mock calls below
 
 // --- Mocks ---
 
@@ -17,23 +12,20 @@ const mockLogErrorToFirebase = jest.fn().mockResolvedValue(undefined);
 
 // Mock @deepgram/sdk
 jest.mock('@deepgram/sdk', () => {
-    // FIX: Require events inside factory
     const { EventEmitter: DeepgramEventEmitter } = require('events');
 
-    // FIX: Define SINGLE mock functions INSIDE factory
     const mockSendInternal = jest.fn();
     const mockFinalizeInternal = jest.fn();
 
     // Setup connection object using these single mocks
     const mockConnectionInternal = new DeepgramEventEmitter();
-    mockConnectionInternal.send = mockSendInternal; // Use the single send mock
-    mockConnectionInternal.finalize = mockFinalizeInternal; // Use the single finalize mock
+    mockConnectionInternal.send = mockSendInternal; // single send mock
+    mockConnectionInternal.finalize = mockFinalizeInternal; // single finalize mock
 
     const mockListenLiveInternal = jest.fn(() => mockConnectionInternal);
     const mockClientInternal = { listen: { live: mockListenLiveInternal } };
     const MockCreateClient = jest.fn(() => mockClientInternal);
 
-    // FIX: Expose the SAME mock functions used internally
     MockCreateClient._listenLive = mockListenLiveInternal;
     MockCreateClient._send = mockSendInternal; // Expose the single send mock
     MockCreateClient._finalize = mockFinalizeInternal; // Expose the single finalize mock
@@ -66,7 +58,6 @@ jest.mock('fs/promises', () => {
 const createMockError = (name, defaultMessage, defaultStatusCode) => {
     return class extends Error {
         constructor(message, statusCode, stack) {
-            // VVV FIX: Add super() call VVV
             super(message || defaultMessage); // Call parent Error constructor
             this.name = name;
             this.statusCode = statusCode || defaultStatusCode;
@@ -75,7 +66,7 @@ const createMockError = (name, defaultMessage, defaultStatusCode) => {
         }
     };
 };
-// Use corrected default export structure
+
 jest.mock('../src/errors/InternalServerError.js', () => ({
     __esModule: true,
     default: createMockError(
@@ -84,19 +75,14 @@ jest.mock('../src/errors/InternalServerError.js', () => ({
         500
     ),
 }));
-// Import mocked error AFTER mocking
 import InternalServerError from '../src/errors/InternalServerError.js';
 
 // --- Import Handler ---
 import { handleWebSocketConnection } from '../src/websocketHandler.js';
-
-// --- Import mocked SDK AFTER mocking if needed (e.g., to get createClient mock itself) ---
-// Not strictly required if accessing internal mocks isn't needed directly via import
-// Import mocked SDK AFTER mocking to retrieve inner handles
 import { createClient as createDeepgramClientMock } from '@deepgram/sdk';
-const mockListenLive = createDeepgramClientMock._listenLive; // Retrieves correct listenLive
-const mockDeepgramSend = createDeepgramClientMock._send;     // Retrieves correct send
-const mockDeepgramFinalize = createDeepgramClientMock._finalize; // Retrieves correct finalize
+const mockListenLive = createDeepgramClientMock._listenLive; 
+const mockDeepgramSend = createDeepgramClientMock._send;  
+const mockDeepgramFinalize = createDeepgramClientMock._finalize; 
 
 // --- Test Suite ---
 describe('WebSocket Handler Logic', () => {
@@ -106,9 +92,9 @@ describe('WebSocket Handler Logic', () => {
     let consoleLogSpy, consoleErrorSpy;
     let pathJoinSpy;
 
-    // Use beforeEach/afterEach for spies
+    // beforeEach/afterEach for spies
     beforeEach(() => {
-        jest.clearAllMocks(); // Standard practice
+        jest.clearAllMocks(); // Standard practice so whatever
 
         // Spies setup
         consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -126,7 +112,7 @@ describe('WebSocket Handler Logic', () => {
         // Need to get the mocked createClient function handle
         const {
             createClient: createDeepgramClientMockFn,
-        } = require('@deepgram/sdk'); // Use require to get the mock
+        } = require('@deepgram/sdk');
         const mockClient = createDeepgramClientMockFn(); // Call the mock factory function
 
         // Prepare dependencies
@@ -230,7 +216,7 @@ describe('WebSocket Handler Logic', () => {
         await new Promise(setImmediate);
 
         expect(mockLogToFirebase).toHaveBeenCalledTimes(1);
-        // Expect double space based on current code logic
+        // Expect double space...
         expect(mockLogToFirebase).toHaveBeenCalledWith(
             testCallSid,
             expect.objectContaining({ transcript: 'First part.  Second part.' })
@@ -263,7 +249,6 @@ describe('WebSocket Handler Logic', () => {
         await new Promise(setImmediate);
 
         expect(mockLogToFirebase).toHaveBeenCalledTimes(1);
-        // This assertion should now pass because the TypeError is fixed
         expect(mockLogErrorToFirebase).toHaveBeenCalledTimes(1);
         expect(mockLogErrorToFirebase).toHaveBeenCalledWith(
             testCallSid,
@@ -295,7 +280,7 @@ describe('WebSocket Handler Logic', () => {
         dgConnectionInstance.emit('error', deepgramError);
         await new Promise(setImmediate);
 
-        expect(mockLogErrorToFirebase).toHaveBeenCalledTimes(1); // Should pass now
+        expect(mockLogErrorToFirebase).toHaveBeenCalledTimes(1);
         expect(mockLogErrorToFirebase).toHaveBeenCalledWith(
             testCallSid,
             expect.objectContaining({
@@ -333,14 +318,14 @@ describe('WebSocket Handler Logic', () => {
                 start: { callSid: testCallSid, streamSid: 'STREAM_WSERR' },
             })
         );
-        mockWs.on('error', () => {}); // Keep dummy listener
+        mockWs.on('error', () => {}); // dummy listener
 
         mockWs.emit('error', wsError);
-        await new Promise(resolve => setTimeout(resolve, 20)); // Keep slight delay
+        await new Promise(resolve => setTimeout(resolve, 20)); // slight delay, not really needed but keeping just as a safeguard 
 
         // Assertions
-        expect(mockDeepgramFinalize).toHaveBeenCalledTimes(1); // <<< Check this again
-        expect(mockLogErrorToFirebase).toHaveBeenCalledTimes(1); // <<< Check this now
+        expect(mockDeepgramFinalize).toHaveBeenCalledTimes(1); 
+        expect(mockLogErrorToFirebase).toHaveBeenCalledTimes(1); 
         expect(mockLogErrorToFirebase).toHaveBeenCalledWith(
             testCallSid,
             expect.objectContaining({ message: 'WebSocketServer Error' })
@@ -360,7 +345,7 @@ describe('WebSocket Handler Logic', () => {
         await new Promise(setImmediate);
 
         expect(mockDeepgramSend).not.toHaveBeenCalled();
-        expect(mockLogErrorToFirebase).toHaveBeenCalledTimes(1); // <<< Check this now
+        expect(mockLogErrorToFirebase).toHaveBeenCalledTimes(1); 
         expect(mockLogErrorToFirebase).toHaveBeenCalledWith(
             testCallSid,
             expect.objectContaining({
