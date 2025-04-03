@@ -1,6 +1,3 @@
-/*
-file: __tests__/handle-speech.test.js
-*/
 import request from 'supertest';
 import express from 'express';
 import twilio from 'twilio';
