@@ -1,9 +1,8 @@
-// Import the REAL FirebaseError class first
 import FirebaseError from '../src/errors/FirebaseError.js';
 
 // --- Mocks ---
 
-// Define mocks INSIDE jest.mock
+// Define mocks inside jest.mock
 jest.mock('firebase-admin', () => {
     const mockPushInternal = jest.fn();
     const mockRefInternal = jest.fn(() => ({ push: mockPushInternal })); // ref() returns object with push()
@@ -26,7 +25,7 @@ jest.mock('firebase-admin', () => {
     return mockAdmin;
 });
 
-// Import the mocked admin AFTER jest.mock
+// Import the mocked admin after jest.mock
 import admin from 'firebase-admin';
 
 // Retrieve references to inner mocks
@@ -34,15 +33,12 @@ const mockPush = admin._mockPush;
 const mockRef = admin._mockRef;
 const mockDatabase = admin._mockDatabase; // The mock for the database() function itself
 
-// DO NOT mock FirebaseError here anymore
-// jest.mock('../src/errors/FirebaseError.js');
-
-// Import the utils under test AFTER mocks are fully set up
+// Import the utils under test after mocks are fully set up
 import { logToFirebase, logErrorToFirebase } from '../src/utils/firebase.js';
 
 // --- Test Setup ---
 describe('Firebase Utilities', () => {
-    // --- Console Spies (optional, but good practice) ---
+    // --- Console Spies ---
     let consoleLogSpy;
     let consoleErrorSpy;
     beforeAll(() => {
@@ -57,10 +53,9 @@ describe('Firebase Utilities', () => {
     });
 
     beforeEach(() => {
-        // Reset the calls/state of the mocks we care about
+        // Reset the calls/state of the mocks
         mockPush.mockClear();
         mockRef.mockClear();
-        // We don't clear mockDatabase itself anymore, as its single call during module load is expected
         // jest.clearAllMocks(); // Use this if other general mocks need clearing
     });
 
@@ -72,8 +67,6 @@ describe('Firebase Utilities', () => {
         it('should call db.ref() with correct path', async () => {
             mockPush.mockResolvedValue({ key: 'newLogKey' });
             await logToFirebase(callSid, logData);
-            // FIX: Don't check if database() was called again. Check ref() was called.
-            // expect(mockDatabase).toHaveBeenCalledTimes(1);
             expect(mockRef).toHaveBeenCalledTimes(1);
             expect(mockRef).toHaveBeenCalledWith(`logs/${callSid}`);
         });
@@ -121,8 +114,6 @@ describe('Firebase Utilities', () => {
         it('should call db.ref() with correct error path', async () => {
             mockPush.mockResolvedValue({ key: 'newErrorKey' });
             await logErrorToFirebase(callSidOrContext, testError);
-            // FIX: Check ref() call, not database()
-            // expect(mockDatabase).toHaveBeenCalledTimes(1);
             expect(mockRef).toHaveBeenCalledTimes(1);
             expect(mockRef).toHaveBeenCalledWith(`errors/${callSidOrContext}`);
         });
