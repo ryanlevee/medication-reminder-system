@@ -1,7 +1,6 @@
 jest.setTimeout(15000);
 import request from 'supertest';
-import express from 'express';
-// No direct Twilio usage in this route, but import router
+import express from 'express';l
 
 // Mock import.meta for elevenLabsService.js
 jest.mock('../src/services/elevenLabsService.js', () => ({
@@ -15,7 +14,7 @@ import callsRouter from '../src/routes/calls.js';
 
 // --- Mocks ---
 
-// Mock firebase-admin (copied from previous tests)
+// Mock firebase-admin
 jest.mock('firebase-admin', () => {
     const databaseMock = jest.fn(() => ({
         ref: jest.fn(() => ({
@@ -49,7 +48,7 @@ const createMockError = (name, defaultMessage, defaultStatusCode) => {
             super(message || defaultMessage);
             this.name = name;
             this.statusCode = statusCode || defaultStatusCode;
-            this.isOperational = true; // Assuming operational for testing purposes
+            this.isOperational = true; // Assume operational for testing purposes
             this.stack = stack || new Error().stack;
             Object.setPrototypeOf(this, new.target.prototype);
         }
@@ -136,7 +135,7 @@ describe('POST /handle-recording', () => {
             .type('form')
             .send({
                 CallSid: mockCallSid,
-                // RecordingSid: missing
+                // RecordingSid: not using
                 RecordingUrl: mockRecordingUrl,
                 RecordingDuration: mockRecordingDuration,
             });
@@ -164,7 +163,7 @@ describe('POST /handle-recording', () => {
             .send({
                 CallSid: mockCallSid,
                 RecordingSid: mockRecordingSid,
-                // RecordingUrl: missing
+                // RecordingUrl: not here
                 RecordingDuration: mockRecordingDuration,
             });
 
@@ -238,8 +237,8 @@ describe('POST /handle-recording', () => {
         // Verify the OUTER catch block's logErrorToFirebase was NOT called
         expect(logErrorToFirebase).not.toHaveBeenCalled();
 
-        // Optional: If you want to assert the console message was printed,
-        // ensure your consoleErrorSpy is active and use:
+        // Assert the console message was printed,
+        // ensure consoleErrorSpy is active and use:
         expect(consoleErrorSpy).toHaveBeenCalledWith(
             'Error logging recording info to Firebase:',
             firebaseLogError
