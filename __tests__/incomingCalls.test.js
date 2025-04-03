@@ -3,7 +3,7 @@ file: __tests__/incomingCalls.test.js
 */
 import request from 'supertest';
 import express from 'express';
-import twilio from 'twilio'; // Import the mocked version
+import twilio from 'twilio';
 
 // --- Mocks ---
 
@@ -184,7 +184,7 @@ describe('POST /incoming-call', () => {
                 To: mockToNumber,
             });
 
-        // Should still succeed in sending TwiML
+        // Verify success in sending TwiML
         expect(response.statusCode).toBe(200);
         expect(response.header['content-type']).toMatch(/text\/xml/);
         expect(response.text).toBe(expectedTwiml);
