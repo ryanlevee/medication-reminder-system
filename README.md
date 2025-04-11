@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project is a Node.js-based voice-driven medication reminder system. It utilizes real-time communication technologies, primarily Twilio, along with Text-to-Speech (TTS), Speech-to-Text (STT), and a Large Language Model (LLM), to interact with users about their medication schedules. The system can initiate outbound calls, handle inbound calls, manage conversational interactions, provide fallback notifications via SMS, and log call details persistently.
+This project is a Node.js-based voice-driven AI medication reminder system. It utilizes real-time communication technologies, primarily Twilio, along with Text-to-Speech (TTS), Speech-to-Text (STT), and a Large Language Model (LLM), to interact with users about their medication schedules. The system can initiate outbound phone calls, handle inbound calls, manage conversational interactions, provide fallback notifications via SMS, and log call details persistently.
 
 ## Features
 
