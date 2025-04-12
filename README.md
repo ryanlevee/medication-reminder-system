@@ -9,7 +9,7 @@ This project is a Node.js-based voice-driven AI medication reminder system. It u
 -   **Outbound Call Trigger:** Initiate voice calls to specified phone numbers via a `POST /call` REST API endpoint.
 -   **Real-time TTS:** Uses ElevenLabs to generate voice prompts for medication reminders and voicemail messages.
 -   **Real-time STT:** Leverages Deepgram via WebSockets (`<Stream>`) to transcribe user speech during calls in real-time.
--   **LLM Interaction:** Integrates with Google Gemini to provide conversational responses to user queries about specific medications (Aspirin, Cardivol, Metformin), dosage, frequency, instructions, storage, etc., based on predefined factual data and a system prompt. If the patient attempts to utilize the LLM for anything other than the predefined topic, the system will refuse to deviate, steering the conversation back to their medications. The patient may also inquire about the nearest pharmacy locations, hours, and phone numbers.
+-   **LLM Interaction:** Integrates with Google Gemini to provide conversational responses to user queries about specific medications (Aspirin, Cardivol, Metformin), dosage, frequency, instructions, storage, etc., based on predefined factual data and a system prompt. If the patient attempts to utilize the LLM for anything other than the predefined topic, the model will refuse to deviate, steering the conversation back to their medications. The patient may also inquire about the nearest pharmacy locations, hours, and phone numbers.
 -   **Call Flow Management:**
     -   Plays specific TTS prompts based on whether a human or answering machine (AMD) answers the call.
     -   Handles user speech input via Twilio `<Gather>`.
