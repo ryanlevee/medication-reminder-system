@@ -237,7 +237,7 @@ medication-reminder-system/
 ├── src/
 │   ├── config/             # Configuration files (Firebase, Twilio)
 │   ├── errors/             # Custom error classes
-│   ├── private/            # Private keys (Firebase key) - In .gitignore!
+│   ├── private/            # Private keys (Firebase key) - In .gitignore
 │   │   └── ...adminsdk...json
 │   ├── public/             # Static files (TTS audio, beep.mpeg)
 │   ├── routes/             # Express route handlers
@@ -246,7 +246,7 @@ medication-reminder-system/
 │   ├── utils/              # Utility functions
 │   ├── server.js           # Main application entry point
 │   └── websocketHandler.js # WebSocket/STT handling
-├── .env                    # Environment variables - In .gitignore!
+├── .env                    # Environment variables - In .gitignore
 ├── .gitignore              # Specifies intentionally untracked files
 ├── package.json            # Project metadata and dependencies
 ├── package-lock.json       # Exact dependency versions
